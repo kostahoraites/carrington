@@ -1,0 +1,21 @@
+
+
+carrington.py makes plots of a single frame
+ -sbatch carrington.sh calls carrington.py for a single time, makes plots in the plots/ directory
+ -sbatch carrington_movie.sh calls carrington.py in an array job
+  -modifying carrington_movie.sh changes the run (EGI, EGL, etc.) and the number of frames
+   -these can be made into movie files using the ffmpeg tool, e.g.:
+       ffmpeg -pattern_type glob -i 'proton_DEF/*/azim_frame_*_00500_ev_traced.png' -vcodec libx264 egl_azim_frame_00500_ev_traced.mp4
+    -and then converted into a .gif file using the 'convert' command line tool
+
+ring_current.py has tools for analyzing the ring current. Makes plots, etc.
+ -Calling ring_current.py with sbatch:
+  -sbatch ring_current.sh
+  -sbatch ring_current_movie.sh
+
+virtual_sc/  folder contains an analysis of solar wind pressure pulses, compared against spacecraft data
+ -virtual_sc.py
+  -plots time series of different spacecraft
+ -sc_vlasiator_comp.py
+  -pressure pulse analysis, uses a .csv file (e.g. pulse_omni.csv) of pressure pulses gathered from CDAWeb data as basis for comparison against Vlasiator
+

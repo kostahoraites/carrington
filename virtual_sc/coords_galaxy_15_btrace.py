@@ -1,0 +1,41 @@
+
+import numpy as np
+from static_field_tracer3d import static_field_tracer3d
+import ftest
+from myutils import get_vlsvfile_fullpath
+
+R_EARTH = 6.371e6
+
+run='egl'
+fileIndex=1760
+#x0=[-6.5*R_EARTH, 0.8*R_EARTH, 1.9*R_EARTH]
+x0=[-4.82179787*R_EARTH, 0.59225026*R_EARTH, 2.80791389*R_EARTH]
+
+#run='egi'
+#fileIndex=1489
+#x0=[-7*R_EARTH, 0*R_EARTH, 3.2*R_EARTH]
+
+file = get_vlsvfile_fullpath(run, fileIndex)
+#file = '/wrk-vakka/group/spacephysics/vlasiator/3D/EGL/bulk/bulk1.egl.0001760.vlsv'
+f = ftest.f(file)
+
+
+max_iterations = 800
+dx = 0.01 * R_EARTH
+ncoordsave = 80    # total number of coordinates in the final file
+dstep_write = int(2*max_iterations / ncoordsave)   # number of iterations between writes
+
+#x_b = static_field_tracer3d( f, x0, max_iterations, dx, direction='+-', bvar='fg_b' )
+x_b = static_field_tracer3d( f, x0, max_iterations, dx, direction='-', bvar='fg_b' )
+
+output_file = open('txt_files/coords_galaxy_15_btrace_{}.txt'.format(run), 'w')
+i = 0
+for x in x_b:
+    if i == dstep_write:
+        output_file.write(str(x/R_EARTH).replace('[','').replace(']','') + '\n')
+        i=0
+    else:
+        i+=1
+output_file.close()
+
+
