@@ -1,0 +1,43 @@
+carrington_beta_star fit_magnetopause():
+- makes a colormap of beta*
+- plots beta*=1 circles on the colormap
+- plots the curve fit of the magnetopause (using beta*) on the colormap
+- plots Shue model on the colormap
+- returns the standoff distance x coordinate (mp_nose_x)
+
+beta_star_colormap.py:
+- calls the function fit_magnetopause()
+- defines the timestep (fileIndex)
+- plots one beta* colormap
+- defines the output location for beta* colormap
+
+beta_star_r_mp.py:
+- calls the function fit_magnetopause()
+- plots the standoff distance (mp_nose_x) as a function of time (for wanted timespan)
+- plots multiple colormaps for wanted timespan
+- defines the output location for beta* colormap
+
+run_beta_star_r_mp.sh:
+- for running beta_star_r_mp.py
+
+run_beta_star_colormap.sh:
+- for running beta_star_colormap.py
+
+IMPORTANT:
+In the function fit_magnetopause() you can define the step which is the amount of plotted beta* circles. First step = 1 but later I also tried step = 0.5. This affects the results a bit.
+
+time_r_mp.txt = the standoff distance values with step = 1
+time_r_mp_step0.5 = the standoff distance values with step = 0.5
+
+mp_models.py:
+- plots the standoff distance data R(t)
+- plots the models (f=2.44, f=2, f=1.7)
+- plots the Shue model
+- reads the file time_r_mp.txt OR time_r_mp_step0.5.txt
+
+reduction.py:
+- function beta_star()
+
+plot_B_r.py:
+- plots the data in xibi.csv
+- makes 2 plots: lg(B) vs r and dlg(B)/dlg(r) vs r
