@@ -30,7 +30,7 @@ nvar = 4
 #runs = ['EGL', 'EGI']
 runs = ['EGL', 'EGI', 'EGP']
 nruns = len(runs)
-fig, axes = plt.subplots(nvar, nruns, figsize= (12,7))      #axes is a 1D array with npos elements
+fig, axes = plt.subplots(nvar, 2, figsize= (12,7))      #axes is a 1D array with npos elements
 
 print('start')
 
@@ -50,7 +50,7 @@ for c in range(2): # day/night column
         plt.rcParams['axes.labelsize'] = 16
         plt.rcParams['axes.titlesize'] = 16
 
-        restore_data = False   # MUCH faster if True, re-calculate data if false
+        restore_data = True   # MUCH faster if True, re-calculate data if false
         if restore_data==True:   # don't reprocess data, use pickle file instead 
             print('Restoring pre-saved file...')
             tmp = restore(save_dir+'carrington_plot_timeseries.pickle')
@@ -105,7 +105,7 @@ for c in range(2): # day/night column
             if run == 'EGP':
                 keys = ['proton_DNF_09999_eV', 'open_vs_closed', '$(B_0 / B)J_\parallel$  $[A/km^2]$']   #, 'Magnetopause_radius_RE\n']
             else: # EGI, EGL
-                keys = ['proton_DNF_10keV', 'open_vs_closed', '$(B_0 / B)J_\parallel$  $[A/km^2]$']   #, 'Magnetopause_radius_RE\n']
+                keys = ['proton_DNF_08891_eV', 'open_vs_closed', '$(B_0 / B)J_\parallel$  $[A/km^2]$']   #, 'Magnetopause_radius_RE\n']
             #keys = ['proton_DNF_15811_eV', 'open_vs_closed', '$(B_0 / B)J_\parallel$  $[A/km^2]$']   #, 'Magnetopause_radius_RE\n']
             #keys = ['proton_DNF_15811_eV', 'open_vs_closed', 'Jpar']
 
@@ -153,12 +153,14 @@ for c in range(2): # day/night column
             dct_plot['DNF'] = {'variables_day':[proton_DNF_10keV_max_day], 'variables_night':[proton_DNF_10keV_max_night],
                                'labels':['8.9 keV'],   # 8891 eV
             #dct_plot['DNF'] = {'variables_day':[proton_DNF_15811_eV_max], 'labels':['15811 eV'],
-                               'ylabel':'max. DNF\n$[cm^{-2}s^{-1}$\n$sr^{-1}eV^{-1}]$', 'ylim':[0, 1500] }  # colors = ['r']
+                               #'ylabel':'max. DNF\n$[cm^{-2}s^{-1}$\n$sr^{-1}eV^{-1}]$', 'ylim':[0, 1500] }  # colors = ['r']
+                               'ylabel':'max. DNF\n$[cm^{-2}s^{-1}$\n$sr^{-1}eV^{-1}]$', 'ylim':[0, 3000] }  # colors = ['r']
                                #'ylabel':r'max. DNF $[cm^{-2}s^{-1}sr^{-1}eV^{-1}]$' }  # colors = ['r']
             #dct_plot['Last closed lat. (deg.)'] = last_closed_north_deg
             #dct_plot['First open lat. (deg.)'] = first_open_north_deg
             dct_plot['OCB'] = {'variables_day':[first_open_north_dayside_deg], 'variables_night':[first_open_north_nightside_deg],
-                               'labels':['noon meridian'], 'ylabel':'OCB\n[deg.]', 'ylim':[68, 78] }
+                               #'labels':['noon meridian'], 'ylabel':'OCB\n[deg.]', 'ylim':[68, 78] }
+                               'labels':['noon meridian'], 'ylabel':'OCB\n[deg.]', 'ylim':[60, 78] }
             #dct_plot['OCB'] = {'variables_day':[first_open_north_dayside_deg, first_open_north_nightside_deg], 
                                #'labels':['noon','midnight'], 'ylabel':'OCB [deg.]', 'ylim':[68, 78] }
             dct_plot['FAC'] = {'variables_day':[jpar_north_max_day],'variables_night':[jpar_north_max_night], 'labels':[None], 
@@ -176,7 +178,8 @@ for c in range(2): # day/night column
         # vv         add Emilia's plot here        vv
         df_sc = pd.read_csv('/wrk-vakka/users/horakons/carrington/magnetopause/ALL_CODES/mp_nose_x_new_'+run+'_backup.csv')   # data generated with updated version of beta_star_r_mp_new.py
         #df_sc = pd.read_csv('/wrk-vakka/users/horakons/carrington/magnetopause/ALL_CODES/mp_nose_x.csv')   # data generated with updated version of beta_star_r_mp.py
-        dct_plot['Mpos'] = {'variables_day':[np.array(df_sc['x'])], 'variables_night':[np.array(df_sc['x'])*0], 'labels':[None], 'ylabel':'R\n[$R_E$]',  'ylim':[8, 11]}
+        #dct_plot['Mpos'] = {'variables_day':[np.array(df_sc['x'])], 'variables_night':[np.array(df_sc['x'])*0], 'labels':[None], 'ylabel':'R\n[$R_E$]',  'ylim':[8, 11]}
+        dct_plot['Mpos'] = {'variables_day':[np.array(df_sc['x'])], 'variables_night':[np.array(df_sc['x'])*0], 'labels':[None], 'ylabel':'R\n[$R_E$]',  'ylim':[6, 11]}
 
         print(dct_plot['Mpos']['variables_day'][0])
         print(dct_plot['Mpos']['variables_night'][0])
@@ -226,8 +229,10 @@ for c in range(2): # day/night column
                             print('DONE plotting night')
                     #if dct_plot[key]['labels'][0] is not None:
                     #    axes[i,c].legend(framealpha=0.5, loc='center left')
-                    axes[i,c].set_xlim([600,1800])
-                    axes[i,c].set_xbound([600,1800])
+                    axes[i,c].set_xlim([300,1800])
+                    axes[i,c].set_xbound([300,1800])
+                    #axes[i,c].set_xlim([600,1800])
+                    #axes[i,c].set_xbound([600,1800])
                     axes[i,c].set_ylim(dct_plot[key]['ylim'])
                     axes[i,c].plot([t0, t0], dct_plot[key]['ylim'], linestyle = ':', color = 'green')
                     if c == 0: # left column

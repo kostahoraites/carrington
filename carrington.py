@@ -59,6 +59,7 @@ def get_all_cell_coordinates(f):
     return x, y, z
 
 
+
 def fg_grid(f, fg_b = None):
     # get the face positions of the cells
     # note that e.g. xmin, xmax give the leftmost and rightmost cell BOUNDARIES (the volumes are between these boundaries)

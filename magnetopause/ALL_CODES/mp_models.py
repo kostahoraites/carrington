@@ -58,7 +58,8 @@ def func(x, t):
 
 f = 2.44
 c_D = 1.2
-Q = 8.22e22 #Am^2
+Q = 8e22 #Am^2           #Vlasiator dipole moment
+#Q = 8.22e22 #Am^2       # Earth's dipole moment
 mu_0 = 4*np.pi*1e-7 #A/m^2
 n = 4e6 #1/m^3
 M = 1.67262192e-27 #kg (proton mass)
@@ -154,7 +155,8 @@ t2 = np.array(list(t2) + [t2[-1]+dt])
 #-------------------------------------------------------------------------------
 #MODEL ^6, f = 1.7:
 
-f = 1.7
+#f = 1.7
+f = 1.75
 R_D = (f**2*mu_0*Q**2/(32*np.pi**2*n*M*u**2))**(1/6.) #meters
 R_03 = (f**2*mu_0*Q**2/(32*np.pi**2*1e6*M*u**2))**(1/6.) #meters
 
@@ -189,7 +191,8 @@ t3 = np.array(list(t3) + [t3[-1]+dt])
 #-------------------------------------------------------------------------------
 #MODEL ^2, f = 1.7:
 
-f = 1.7
+#f = 1.7
+f = 1.75
 R_D = (f**2*mu_0*Q**2/(32*np.pi**2*n*M*u**2))**(1/6.) #meters
 R_04 = (f**2*mu_0*Q**2/(32*np.pi**2*1e6*M*u**2))**(1/6.) #meters
 
@@ -230,7 +233,8 @@ t4 = np.array(list(t4) + [t4[-1]+dt])
 #------------------------------------------------------------------------------
 #LINEAR MODEL:
 
-f_values = [2.44, 2, 1.7]
+f_values = [2.44, 2, 1.75]
+#f_values = [2.44, 2, 1.7]
 for f in f_values:
     R_D = (f**2*mu_0*Q**2/(32*np.pi**2*n*M*u**2))**(1/6.)
     R_0 = (f**2*mu_0*Q**2/(32*np.pi**2*1e6*M*u**2))**(1/6.)
@@ -243,7 +247,7 @@ for f in f_values:
         linear1 = R_D + ampl*np.exp(-b*t_data_0)*np.cos(b*(6*K-1)**0.5*t_data_0 + phi)
     if f == 2:
         linear2 = R_D + ampl*np.exp(-b*t_data_0)*np.cos(b*(6*K-1)**0.5*t_data_0 + phi)
-    if f == 1.7:
+    if f == 1.75:
         linear3 = R_D + ampl*np.exp(-b*t_data_0)*np.cos(b*(6*K-1)**0.5*t_data_0 + phi)
 
 #-----------------------------------------------------------------------------
@@ -274,7 +278,8 @@ ax.plot([621, t_shock], [R_03/R_E, R_03/R_E], color='tab:cyan', linestyle=':')
 #NONLINEAR:
 ax.plot(t, x/R_E, 'goldenrod', label=r'Nonlinear, $f = 2.44$')
 ax.plot(t2, x2/R_E, 'tab:red', label=r'Nonlinear, $f = 2$')
-ax.plot(t3, x3/R_E, 'tab:cyan', label=r'Nonlinear, $f = 1.7$')
+ax.plot(t3, x3/R_E, 'tab:cyan', label=r'Nonlinear, $f = 1.75$')
+#ax.plot(t3, x3/R_E, 'tab:cyan', label=r'Nonlinear, $f = 1.7$')
 
 #NONLINEAR ^6 VS ^2:
 #ax.plot(t3, x3/R_E, 'tab:cyan', label=r'Nonlinear, $R^{-6}$ ($f = 1.7$)')
@@ -283,7 +288,8 @@ ax.plot(t3, x3/R_E, 'tab:cyan', label=r'Nonlinear, $f = 1.7$')
 #LINEAR:
 ax.plot(t_data, linear1/R_E, 'goldenrod', linestyle='-.', alpha=0.5, label=r'Linear, $f = 2.44$')
 ax.plot(t_data, linear2/R_E, 'tab:red', linestyle='-.', alpha=0.5, label=r'Linear, $f = 2$')
-ax.plot(t_data, linear3/R_E, 'tab:cyan', linestyle='-.', alpha=0.5, label=r'Linear, $f = 1.7$')
+ax.plot(t_data, linear3/R_E, 'tab:cyan', linestyle='-.', alpha=0.5, label=r'Linear, $f = 1.75$')
+#ax.plot(t_data, linear3/R_E, 'tab:cyan', linestyle='-.', alpha=0.5, label=r'Linear, $f = 1.7$')
 
 #SHUE:
 ax.plot([621, t_shock], [r_0, r_0], color='limegreen', linestyle='--', linewidth=1.5, label='Shue (1998)')

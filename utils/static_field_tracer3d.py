@@ -5,6 +5,7 @@ import warnings
 from scipy import interpolate
 
 
+
 def static_field_tracer3d( vlsvReader, x0, max_iterations, dx, direction='+', bvar='fg_b' ):
    ''' Field tracer in a static frame
        :param vlsvReader:         An open vlsv file

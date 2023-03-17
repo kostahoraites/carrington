@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH -t 06:00:00
+#SBATCH -t 10:00:00
 #SBATCH -J test_figure
 #SBATCH -p short
 #SBATCH -n 1

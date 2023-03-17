@@ -5,6 +5,12 @@ from time import time
 import hashlib
 import re
 
+try:
+    from pyspedas.utilities.time_string import *
+except:
+    from pyspedas.utilities.time_string import *
+    
+
 '''
  show() creates uses display to display a plot created by tell(),
  which is saved in a default location
@@ -43,6 +49,8 @@ def get_bulklocation(run, fileIndex):
         #location = "/wrk-vakka/group/spacephysics/vlasiator/3D/{}/bulk5/".format(run.upper())
     elif run.upper() == 'EGILIKE2':
         location = "/wrk-vakka/users/ykempf/ionosphere/EGI/FAC_fgb/"
+    elif run.upper() == 'FHA':
+        location = "/wrk-vakka/group/spacephysics/vlasiator/3D/FHA/bulk1/"
 
     return location
 
@@ -66,12 +74,16 @@ def get_filename(run, fileIndex):
         filename = "bulk.{}.vlsv_fg".format(str(fileIndex).zfill(7) )
     elif run.upper() == 'EGILIKE2':   # test run
         filename = "bulk.{}.vlsv".format(str(fileIndex).zfill(7) )
+    elif run.upper() == 'FHA':   # test run
+        filename = "bulk1.{}.vlsv".format(str(fileIndex).zfill(7) )
     return filename
 
 
 
 def get_vlsvfile_fullpath(run, fileIndex):
     return get_bulklocation(run, fileIndex) + get_filename(run, fileIndex)
+
+
 
 
 def tell(plt):
@@ -274,5 +286,16 @@ def restore(file):
 
 
 
+def t_string(t, epoch = False):
+    if epoch:
+        return time_string(t/1000 -  719528. * 24.* 3600.)
+    else:
+        return time_string(t)
 
+
+def t_double(date, epoch = False):
+    if epoch:
+        return (time_float(date) + 719528. * 24.* 3600.) * 1000
+    else:
+        return time_float(date)
 

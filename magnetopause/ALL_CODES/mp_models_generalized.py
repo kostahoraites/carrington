@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -10,7 +9,8 @@ fig, ax = plt.subplots(figsize=(6,4), dpi=240)
 
 f = 2.44
 c_D = 1.2
-Q = 8.22e22 #Am^2
+Q = 8e22 #Am^2   # Vlasiator dipole
+#Q = 8.22e22 #Am^2      # Earth's real dipole
 mu_0 = 4*np.pi*1e-7 #A/m^2
 n = 4e6 #1/m^3
 M = 1.67262192e-27 #kg (proton mass)
@@ -75,7 +75,8 @@ r_data = np.array(r_data)
 #-------------------------------------------------------------------------------
 #MODEL ^6, f = 1.7:
 
-f = 1.7
+#f = 1.7
+f = 1.75
 R_D = (f**2*mu_0*Q**2/(32*np.pi**2*n*M*u**2))**(1/6.) #meters
 R_03 = (f**2*mu_0*Q**2/(32*np.pi**2*1e6*M*u**2))**(1/6.) #meters
 
@@ -156,9 +157,10 @@ def n_pulse(t, t0, nF, type ='tanh', tstart=0):
         return nF * (0.75 * np.exp((t-tstart) / t0) / (1. + np.exp(t / t0)) + 0.25)
 
 
-#MODEL ^6, f = 1.7:
+#MODEL ^6, f = 51.7:
 
-f = 1.7
+#f = 1.7
+f = 1.75
 R_D = (f**2*mu_0*Q**2/(32*np.pi**2*n*M*u**2))**(1/6.) #meters
 R_tdep = R_03   # (f**2*mu_0*Q**2/(32*np.pi**2*1e6*M*u**2))**(1/6.) #meters
 
