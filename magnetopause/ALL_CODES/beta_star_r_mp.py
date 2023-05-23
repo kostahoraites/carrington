@@ -7,7 +7,8 @@ from pyPlots import plot_vdf
 
 import pandas as pd
 
-
+global run
+run = 'FHA'   # EGL, FHA
 
 from carrington_beta_star import fit_magnetopause
 
@@ -16,7 +17,6 @@ def parallelize_this(t):
     # returns: magnetopause position at time t [float]
     # FILL THIS IN
     
-    run = 'EGL'
     fileIndex = str(t) #time in seconds
 
     if len(fileIndex) == 3:
@@ -50,7 +50,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-nproc', default=1, help="number of processes, multithreading" )
 args = parser.parse_args()
 
-times = np.arange(621, 1761)
+if run == 'EGL':
+    times = np.arange(621, 1761)   # EGL
+elif run == 'FHA':
+    times = np.arange(501, 1498)   # FHA
 
 ## Parallel processing
 from multiprocessing import Pool
@@ -64,7 +67,7 @@ standoff_dist = pool.map(parallelize_this, times)
 #df = pd.DataFrame(data={'x':xs, 't':ts})
 #df.to_csv('mp_nose_x.csv', index=False)
 df = pd.DataFrame(data={'x':np.array(standoff_dist), 't':np.array(times)})
-df.to_csv('mp_nose_x.csv', index=False)
+df.to_csv('mp_nose_x_{}.csv'.format(run), index=False)
 
 
 # now plot the results

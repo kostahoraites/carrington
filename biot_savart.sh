@@ -5,11 +5,19 @@
 #SBATCH -t 16:00:00
 #SBATCH -M carrington
 #SBATCH --partition=short
-#SBATCH --ntasks=1
+#SBATCH --ntasks=1               # tasks per node
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=64       # cpu-cores per task (>1 if multi-threaded tasks)
-#SBATCH --mem=160G # memory per node 20G per task?
-##SBATCH --no-requeue
+#SBATCH --mem=160G # memory per node
+#SBATCH --array=0-17%4
+     # X-Y%Z means "run with $SLURM_ARRAY_TASK_ID from X to Y, on at most Z nodes at a time"
+     # run EGL: 0-17
+     # run FHA: 0-11 ?
+     ### ^ task number indexed by $SLURM_ARRAY_TASK_ID ^
+
+###SBATCH --no-requeue
+###SBATCH --exclude=carrington-2
+
 
 
 umask 007
@@ -44,6 +52,9 @@ export OMP_NUM_THREADS=$t
 export PATH=/proj/jesuni/projappl/tex-basic/texlive/2020/bin/x86_64-linux:$PATH
 #module load Python/3.7.2-GCCcore-8.2.0
 
-time python utils/biot_savart.py -nproc 64
+NPROC=64
+RUN=EGL
+
+time srun python utils/biot_savart.py -nproc $NPROC -task $SLURM_ARRAY_TASK_ID -run $RUN
 
 echo Job complete.

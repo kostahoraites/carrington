@@ -12,7 +12,7 @@ from myutils import get_vlsvfile_fullpath
 from carrington_beta_star import fit_magnetopause
 
 global run
-run = 'EGP'   # 'EGI', 'EGP'
+run = 'FHA'   # 'EGI','EGL' 'EGP', 'FHA'
 
 def parallelize_this(t):
     # input t is the time in seconds [integer]
@@ -94,6 +94,8 @@ elif run == 'EGI':
     times = np.array(np.arange(662, 1507))
 elif run == 'EGP':
     times = np.array(np.arange(352, 506))    #or 269-506. But doesn't exist precipitation data before t=352
+elif run == 'FHA':
+    times = np.array(np.arange(501, 1498))
 B = times * 0.
 standoff_dist = times * 0.
 C_I = times * 0.
@@ -124,6 +126,9 @@ for i, d in enumerate(dicts):
 #    standoff_dist[i] = tup[0]
 #    B[i] = tup[1]
 
+print('TEST FLAG')
+print(times)
+print(standoff_dist)
 
 #new way of saving the data
 #i_sort = np.argsort(np.array(t))

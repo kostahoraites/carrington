@@ -276,9 +276,12 @@ ax.plot([621, t_shock], [R_03/R_E, R_03/R_E], color='tab:cyan', linestyle=':')
 #ax.plot([621, t_shock], [R_04/R_E, R_04/R_E], color='tab:orange', linestyle=':')
 
 #NONLINEAR:
-ax.plot(t, x/R_E, 'goldenrod', label=r'Nonlinear, $f = 2.44$')
-ax.plot(t2, x2/R_E, 'tab:red', label=r'Nonlinear, $f = 2$')
-ax.plot(t3, x3/R_E, 'tab:cyan', label=r'Nonlinear, $f = 1.75$')
+ax.plot(t, x/R_E, 'goldenrod', label=r'Eq. 3: $f = 2.44$')
+ax.plot(t2, x2/R_E, 'tab:red', label=r'Eq. 3: $f = 2$')
+ax.plot(t3, x3/R_E, 'tab:cyan', label=r'Eq. 3: $f = 1.75$')
+#ax.plot(t, x/R_E, 'goldenrod', label=r'Nonlinear, $f = 2.44$')
+#ax.plot(t2, x2/R_E, 'tab:red', label=r'Nonlinear, $f = 2$')
+#ax.plot(t3, x3/R_E, 'tab:cyan', label=r'Nonlinear, $f = 1.75$')
 #ax.plot(t3, x3/R_E, 'tab:cyan', label=r'Nonlinear, $f = 1.7$')
 
 #NONLINEAR ^6 VS ^2:
@@ -286,9 +289,12 @@ ax.plot(t3, x3/R_E, 'tab:cyan', label=r'Nonlinear, $f = 1.75$')
 #ax.plot(t4, x4/R_E, 'tab:orange', label=r'Nonlinear, $R^{-2}$ ($f = 1.7$)')
 
 #LINEAR:
-ax.plot(t_data, linear1/R_E, 'goldenrod', linestyle='-.', alpha=0.5, label=r'Linear, $f = 2.44$')
-ax.plot(t_data, linear2/R_E, 'tab:red', linestyle='-.', alpha=0.5, label=r'Linear, $f = 2$')
-ax.plot(t_data, linear3/R_E, 'tab:cyan', linestyle='-.', alpha=0.5, label=r'Linear, $f = 1.75$')
+ax.plot(t_data, linear1/R_E, 'goldenrod', linestyle='-.', alpha=0.5, label=r'Eq. 5: $f = 2.44$')
+ax.plot(t_data, linear2/R_E, 'tab:red', linestyle='-.', alpha=0.5, label=r'Eq. 5: $f = 2$')
+ax.plot(t_data, linear3/R_E, 'tab:cyan', linestyle='-.', alpha=0.5, label=r'Eq. 5: $f = 1.75$')
+#ax.plot(t_data, linear1/R_E, 'goldenrod', linestyle='-.', alpha=0.5, label=r'Linear, $f = 2.44$')
+#ax.plot(t_data, linear2/R_E, 'tab:red', linestyle='-.', alpha=0.5, label=r'Linear, $f = 2$')
+#ax.plot(t_data, linear3/R_E, 'tab:cyan', linestyle='-.', alpha=0.5, label=r'Linear, $f = 1.75$')
 #ax.plot(t_data, linear3/R_E, 'tab:cyan', linestyle='-.', alpha=0.5, label=r'Linear, $f = 1.7$')
 
 #SHUE:

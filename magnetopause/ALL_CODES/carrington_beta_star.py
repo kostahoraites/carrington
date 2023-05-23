@@ -513,7 +513,7 @@ def fit_magnetopause(f, run = '', root_dir = '', fileIndex = '', threshold = 1, 
         outputLocation = root_dir
 
         # Defining source and output file locations
-        run = 'EGP'   # EGP
+        #run = 'FHA'   # EGP
         outputLocation = '/wrk-vakka/users/horakons/carrington/plots/{}_validation_paper/'.format(run)
         if run == 'EGL':
             j=857                       #EGL --- pressure pulse arrival time
@@ -523,6 +523,10 @@ def fit_magnetopause(f, run = '', root_dir = '', fileIndex = '', threshold = 1, 
             j=506                       #EGP --- first time with precipitation data   (269-506 total)
             before_index = 352 #     EGL: 621
             after_index = 506 #      EGL: 1760
+        elif run == 'FHA':
+            j=1000                       #EGP --- first time with precipitation data   (269-506 total)
+            before_index = 501 #     available range
+            after_index = 1497 #
 
         # Time step number
         j = int(fileIndex)

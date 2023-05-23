@@ -22,6 +22,8 @@ mu_0 = 4e-7 * np.pi
 import argparse
 parser = argparse.ArgumentParser()
     
+parser.add_argument('-run', default='EGL', help="run name" )
+parser.add_argument('-task', default=0, help="task no." )
 parser.add_argument('-nproc', default=1, help="number of processors to use " )
 global ARGS 
 ARGS = parser.parse_args()
@@ -152,13 +154,13 @@ def b_dip_magnitude(theta, r, mag_mom = 8e22):
 
 @jit(nopython=True)
 def integrate_biot_savart(coord_list, vg_x, vg_y, vg_z, vg_J, dV):
-    # accelerate with numba and Pool.map()?
+    # accelerate with numba
     # Biot-Savart: B = (mu_0 / 4 * pi) \int { J x r' / |r'|^3 } dV
     B = np.zeros((len(coord_list), 3))
+    r_p = np.zeros((vg_x.size, 3))
 
     for i, coord in enumerate(coord_list):
-        print(i, '/', len(coord_list))
-        r_p = np.zeros((vg_x.size, 3))
+        #print(i, '/', len(coord_list))
         r_p[:,0] = coord[0] - vg_x
         r_p[:,1] = coord[1] - vg_y
         r_p[:,2] = coord[2] - vg_z
@@ -247,21 +249,23 @@ def save_B_vlsv(input_tuple):
     '''
     # instantiate VlsvWriter object
     run, fileIndex = input_tuple
-    filename_vlsv = '/wrk-vakka/users/horakons/carrington/sidecar_vlsv/ionosphere_B_sidecar_{}.{}.vlsv'.format(run, str(fileIndex).zfill(7))
     filename = get_vlsvfile_fullpath( run, fileIndex)
     f = pt.vlsvfile.VlsvReader( filename )      # f contains the vg_ mesh over which Biot-Savart is integrated
     if run == 'EGL':
         f_sidecar = pt.vlsvfile.VlsvReader('/wrk-vakka/group/spacephysics/vlasiator/3D/EGL/visualizations_2/ballooning/jlsidecar_bulk1.egl.{}.vlsv'.format(str(fileIndex).zfill(7)))
         f_iono = pt.vlsvfile.VlsvReader( '/wrk-vakka/group/spacephysics/vlasiator/temp/ionogrid_FHA.vlsv' )
+        save_dir = '/wrk-vakka/group/spacephysics/vlasiator/3D/EGL/sidecars/ig_B/'
     elif run == 'FHA':
         f_sidecar = None
         f_iono = f
-    writer = pt.vlsvfile.VlsvWriter(f_iono, filename_vlsv)
+        save_dir = '/wrk-vakka/group/spacephysics/vlasiator/3D/FHA/bulk1_sidecars/ig_B/'
     # calculate magnetic fields
     ig_r = get_ig_r(f_iono)                     # f_iono contains the ionospheric mesh (the locations where B is evaluated)
     B_iono = B_ionosphere(f, ig_r = ig_r)
     B_inner, B_outer = B_magnetosphere(f, f_sidecar = f_sidecar, rmin = 5 * 6.371e6, ig_r = ig_r)
     # write to file
+    filename_vlsv = save_dir + 'ionosphere_B_sidecar_{}.{}.vlsv'.format(run, str(fileIndex).zfill(7))
+    writer = pt.vlsvfile.VlsvWriter(f_iono, filename_vlsv)
     writer.write(ig_r,'ig_r','VARIABLE','ionosphere')
     writer.write(B_iono,'ig_B_ionosphere','VARIABLE','ionosphere')
     writer.write(B_inner,'ig_B_inner','VARIABLE','ionosphere')
@@ -281,42 +285,43 @@ def save_B_vlsv(input_tuple):
 
 if __name__ == '__main__':
     ## main file
-    #start = 621
-    #stop = 1760
-    #step = 20
-    #t = np.arange(start, stop +1, step )
-    #Dsts = np.zeros(int((stop - start + 1) / step))
-    #for i, fileIndex in enumerate(range(start, stop + 1, step)):
-    #    filename = get_vlsvfile_fullpath('EGL', fileIndex) 
-    #    f = pt.vlsvfile.VlsvReader(filename)
-    #    f_sidecar = pt.vlsvfile.VlsvReader('/wrk-vakka/group/spacephysics/vlasiator/3D/EGL/visualizations_2/ballooning/jlsidecar_bulk1.egl.{}.vlsv'.format(str(fileIndex).zfill(7)))
+    start = 621
+    stop = 1760
+    step = 20
+    t = np.arange(start, stop +1, step )
+    Dsts = np.zeros(int((stop - start + 1) / step))
+    for i, fileIndex in enumerate(range(start, stop + 1, step)):
+        filename = get_vlsvfile_fullpath('EGL', fileIndex) 
+        f = pt.vlsvfile.VlsvReader(filename)
+        f_sidecar = pt.vlsvfile.VlsvReader('/wrk-vakka/group/spacephysics/vlasiator/3D/EGL/visualizations_2/ballooning/jlsidecar_bulk1.egl.{}.vlsv'.format(str(fileIndex).zfill(7)))
     #    print(i, f_sidecar)
-    #    Dst = calc_Dst(f, f_sidecar = f_sidecar, rmin = 5 * 6.371e6)
+        Dst = calc_Dst(f, f_sidecar = f_sidecar, rmin = 5 * 6.371e6)
     #    print(Dst)
-    #    Dsts[i] = Dst
-    #plt.plot(t, Dsts * 1e9)
-    #plt.xlabel('t [sec]')
-    #plt.ylabel('Dst [nT]')
+        Dsts[i] = Dst
+    plt.plot(t, Dsts * 1e9)
+    plt.xlabel('t [sec]')
+    plt.ylabel('Dst [nT]')
     #plt.savefig('/wrk-vakka/users/horakons/carrington/plots/EGL/Dst/Dst_EGL.png')
     #save('/wrk-vakka/users/horakons/carrington/data/EGL/Dst/Dst_EGL.pickle', t = t, Dsts = Dsts)
     ##
-    #start = 501
-    #stop = 1000
-    #step = 20
-    #t = np.arange(start, stop +1, step )
-    #Dsts = np.zeros(int((stop - start + 1) / step))
-    #for i, fileIndex in enumerate(range(start, stop + 1, step)):
-    #    filename = get_vlsvfile_fullpath('FHA', fileIndex) 
-    #    f = pt.vlsvfile.VlsvReader(filename)
-    #    f_sidecar = None
-    #    print(i, f_sidecar)
-    #    Dst = calc_Dst(f, f_sidecar = f_sidecar, rmin = 5 * 6.371e6)
-    #    print(Dst)
-    #    Dsts[i] = Dst
-    #plt.plot(t, Dsts * 1e9)
+    start = 501
+    stop = 1500
+    step = 20
+    t = np.arange(start, stop +1, step )
+    Dsts = np.zeros(int((stop - start + 1) / step))
+    for i, fileIndex in enumerate(range(start, stop + 1, step)):
+        filename = get_vlsvfile_fullpath('FHA', fileIndex) 
+        f = pt.vlsvfile.VlsvReader(filename)
+        f_sidecar = None
+        #print(i, f_sidecar)
+        Dst = calc_Dst(f, f_sidecar = f_sidecar, rmin = 5 * 6.371e6)
+        #print(Dst)
+        Dsts[i] = Dst
+    plt.plot(t, Dsts * 1e9)
     #plt.xlabel('t [sec]')
     #plt.ylabel('Dst [nT]')
     #plt.savefig('/wrk-vakka/users/horakons/carrington/plots/FHA/Dst/Dst_FHA.png')
+    plt.savefig('/wrk-vakka/users/horakons/carrington/plots/FHA/Dst/Dst_FHA_EGL.png')
     #save('/wrk-vakka/users/horakons/carrington/data/FHA/Dst/Dst_FHA.pickle', t = t, Dsts = Dsts)
     ##
     #fileIndex = 1100        # note: ig_inplanecurrent variable doesn't exist in all FHA files!
@@ -329,20 +334,33 @@ if __name__ == '__main__':
     ## compute B
     #B_inner, B_outer = biot_savart(coord_list, f, f_sidecar = f_sidecar)
     #B_ionosphere = B_ionosphere(f, f_sidecar = f_sidecar, rmin = 5 * 6.371e6)
+    #
+    #
     ### EGL:
-    from multiprocessing import Pool
-    pool = Pool(int(ARGS.nproc))
-    input_list = [('EGL', i) for i in range(621, 1761)]
-    f_out = pool.map(save_B_vlsv, input_list)       # this one resulted in an error
-    pool.close()
-    pool.join()
-    ### FHA:
-    from multiprocessing import Pool
-    pool = Pool(int(ARGS.nproc))
-    input_list = [('FHA', i) for i in range(501, 1171)]
-    f_out = pool.map(save_B_vlsv, input_list)       # this one resulted in an error
-    pool.close()
-    pool.join()
+    #from multiprocessing import Pool
+    #pool = Pool(int(ARGS.nproc))
+    #run = ARGS.run
+    #if run == 'EGL':
+    #    start = 621 + (int(ARGS.task) * int(ARGS.nproc))
+    #elif run == 'FHA':
+    #    start = 501 + (int(ARGS.task) * int(ARGS.nproc))
+    #    #start = 757 + (int(ARGS.task) * int(ARGS.nproc))
+    #stop = start + int(ARGS.nproc)
+    #print('start:, ', start, ', stop: ', stop)
+    #input_list = [(run, i) for i in range(start, stop)]
+    #f_out = pool.map(save_B_vlsv, input_list)
+    #pool.close()
+    #pool.join()
+    #
+    #
+    #
+    #### FHA:
+    #from multiprocessing import Pool
+    #pool = Pool(int(ARGS.nproc))
+    #input_list = [('FHA', i) for i in range(501, 1171)]
+    #f_out = pool.map(save_B_vlsv, input_list)
+    #pool.close()
+    #pool.join()
 
     #save_B_vlsv( ('FHA', 600) )
 

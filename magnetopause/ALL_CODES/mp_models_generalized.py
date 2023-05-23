@@ -135,7 +135,7 @@ ax.plot(t3, x3/R_E, 'tab:cyan', label=r'Eq. 3')
 
 #TITLES, AXES:
 plt.grid(linewidth=0.5, alpha=0.5)
-plt.title('Magnetopause Standoff Distance')
+#plt.title('Magnetopause Standoff Distance')
 plt.xlabel('Time [s]')
 ax.set_xticks([800, 857, 1000, 1200, 1400, 1600])
 ax.set_xticklabels(['800', r'$t_{0}$', '1000', '1200', '1400', '1600'])

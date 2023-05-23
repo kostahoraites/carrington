@@ -51,6 +51,8 @@ def get_bulklocation(run, fileIndex):
         location = "/wrk-vakka/users/ykempf/ionosphere/EGI/FAC_fgb/"
     elif run.upper() == 'FHA':
         location = "/wrk-vakka/group/spacephysics/vlasiator/3D/FHA/bulk1/"
+    elif run.upper() == 'FHAFGB':
+        location = "/wrk-vakka/group/spacephysics/vlasiator/3D/FHA/bulk_with_fg_10/"
 
     return location
 
@@ -76,6 +78,8 @@ def get_filename(run, fileIndex):
         filename = "bulk.{}.vlsv".format(str(fileIndex).zfill(7) )
     elif run.upper() == 'FHA':   # test run
         filename = "bulk1.{}.vlsv".format(str(fileIndex).zfill(7) )
+    elif run.upper() == 'FHAFGB':   # test run
+        filename = "bulk_with_fg_10.{}.vlsv".format(str(fileIndex).zfill(7) )
     return filename
 
 

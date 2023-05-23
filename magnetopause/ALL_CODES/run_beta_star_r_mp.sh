@@ -1,7 +1,7 @@
 #!/bin/bash -l
 ###carrington:
 
-#SBATCH -J validation_paper_plots
+#SBATCH -J beta_star_r_mp
 #SBATCH -t 24:00:00
 #SBATCH -M carrington
 #SBATCH --partition=long

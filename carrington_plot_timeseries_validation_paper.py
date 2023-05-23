@@ -28,7 +28,9 @@ args = parser.parse_args()
 nvar = 4
 
 #runs = ['EGL', 'EGI']
-runs = ['EGL', 'EGI', 'EGP']
+#runs = ['EGL', 'EGI', 'EGP']
+#runs = ['EGL', 'EGI', 'FHA']
+runs = ['EGL', 'EGI', 'FHAFGB']
 nruns = len(runs)
 fig, axes = plt.subplots(nvar, 2, figsize= (12,7))      #axes is a 1D array with npos elements
 
@@ -50,7 +52,7 @@ for c in range(2): # day/night column
         plt.rcParams['axes.labelsize'] = 16
         plt.rcParams['axes.titlesize'] = 16
 
-        restore_data = True   # MUCH faster if True, re-calculate data if false
+        restore_data = False   # MUCH faster if True, re-calculate data if False
         if restore_data==True:   # don't reprocess data, use pickle file instead 
             print('Restoring pre-saved file...')
             tmp = restore(save_dir+'carrington_plot_timeseries.pickle')
@@ -153,18 +155,21 @@ for c in range(2): # day/night column
             dct_plot['DNF'] = {'variables_day':[proton_DNF_10keV_max_day], 'variables_night':[proton_DNF_10keV_max_night],
                                'labels':['8.9 keV'],   # 8891 eV
             #dct_plot['DNF'] = {'variables_day':[proton_DNF_15811_eV_max], 'labels':['15811 eV'],
-                               #'ylabel':'max. DNF\n$[cm^{-2}s^{-1}$\n$sr^{-1}eV^{-1}]$', 'ylim':[0, 1500] }  # colors = ['r']
-                               'ylabel':'max. DNF\n$[cm^{-2}s^{-1}$\n$sr^{-1}eV^{-1}]$', 'ylim':[0, 3000] }  # colors = ['r']
+                               #'ylabel':'max. DNF\n$[cm^{-2}s^{-1}$\n$sr^{-1}eV^{-1}]$', 'ylim':[0, 1500] }  # colors = ['r']   # PAPER?
+                               #'ylabel':'max. DNF\n$[cm^{-2}s^{-1}$\n$sr^{-1}eV^{-1}]$', 'ylim':[0, 3000] }  # colors = ['r']   # EGP?
+                               'ylabel':'max. DNF\n$[cm^{-2}s^{-1}$\n$sr^{-1}eV^{-1}]$', 'ylim':[0, 1500] }  # colors = ['r']
                                #'ylabel':r'max. DNF $[cm^{-2}s^{-1}sr^{-1}eV^{-1}]$' }  # colors = ['r']
             #dct_plot['Last closed lat. (deg.)'] = last_closed_north_deg
             #dct_plot['First open lat. (deg.)'] = first_open_north_deg
             dct_plot['OCB'] = {'variables_day':[first_open_north_dayside_deg], 'variables_night':[first_open_north_nightside_deg],
-                               #'labels':['noon meridian'], 'ylabel':'OCB\n[deg.]', 'ylim':[68, 78] }
-                               'labels':['noon meridian'], 'ylabel':'OCB\n[deg.]', 'ylim':[60, 78] }
+                               #'labels':['noon meridian'], 'ylabel':'OCB\n[deg.]', 'ylim':[68, 78] }  # PAPER?
+                               #'labels':['noon meridian'], 'ylabel':'OCB\n[deg.]', 'ylim':[60, 78] }  # EGP?
+                               'labels':['noon meridian'], 'ylabel':'OCB\n[deg.]', 'ylim':[65, 85] }
             #dct_plot['OCB'] = {'variables_day':[first_open_north_dayside_deg, first_open_north_nightside_deg], 
                                #'labels':['noon','midnight'], 'ylabel':'OCB [deg.]', 'ylim':[68, 78] }
             dct_plot['FAC'] = {'variables_day':[jpar_north_max_day],'variables_night':[jpar_north_max_night], 'labels':[None], 
-                               'ylabel':'max. FAC\n$[A km^{-2}]$', 'ylim':[0.5, 2.5]}  # colors = ['r']
+                               #'ylabel':'max. FAC\n$[A km^{-2}]$', 'ylim':[0.5, 2.5]}  # colors = ['r']       #PAPER?
+                               'ylabel':'max. FAC\n$[A km^{-2}]$', 'ylim':[0, 2.0]}  # colors = ['r']
                                #'ylabel':r'$(B_0 / B) J_\parallel [A km^{-2}]$'}  # colors = ['r']
             #dct_plot['Magnetopause standoff (RE)'] = magnetopause_standoff_RE
        
@@ -174,12 +179,17 @@ for c in range(2): # day/night column
         dct_plot['FAC']['ylabel'] = 'max. FAC\n$[A km^{-2}]$'
         
         t0 = 857   # nominal pulse arrival time, EGL
-        
-        # vv         add Emilia's plot here        vv
-        df_sc = pd.read_csv('/wrk-vakka/users/horakons/carrington/magnetopause/ALL_CODES/mp_nose_x_new_'+run+'_backup.csv')   # data generated with updated version of beta_star_r_mp_new.py
-        #df_sc = pd.read_csv('/wrk-vakka/users/horakons/carrington/magnetopause/ALL_CODES/mp_nose_x.csv')   # data generated with updated version of beta_star_r_mp.py
-        #dct_plot['Mpos'] = {'variables_day':[np.array(df_sc['x'])], 'variables_night':[np.array(df_sc['x'])*0], 'labels':[None], 'ylabel':'R\n[$R_E$]',  'ylim':[8, 11]}
-        dct_plot['Mpos'] = {'variables_day':[np.array(df_sc['x'])], 'variables_night':[np.array(df_sc['x'])*0], 'labels':[None], 'ylabel':'R\n[$R_E$]',  'ylim':[6, 11]}
+
+        Mpos = False
+        if Mpos == True:
+            # vv         add Emilia's plot here        vv
+            df_sc = pd.read_csv('/wrk-vakka/users/horakons/carrington/magnetopause/ALL_CODES/mp_nose_x_new_'+run+'_backup.csv')   # data generated with updated version of beta_star_r_mp_new.py
+            #df_sc = pd.read_csv('/wrk-vakka/users/horakons/carrington/magnetopause/ALL_CODES/mp_nose_x.csv')   # data generated with updated version of beta_star_r_mp.py
+            #dct_plot['Mpos'] = {'variables_day':[np.array(df_sc['x'])], 'variables_night':[np.array(df_sc['x'])*0], 'labels':[None], 'ylabel':'R\n[$R_E$]',  'ylim':[8, 11]}
+            dct_plot['Mpos'] = {'variables_day':[np.array(df_sc['x'])], 'variables_night':[np.array(df_sc['x'])*0], 'labels':[None], 'ylabel':'R\n[$R_E$]',  'ylim':[6, 11]}
+        else:  # dummy
+            dct_plot['Mpos'] = deepcopy(dct_plot['FAC'])
+            dct_plot['Mpos']['ylabel'] = 'dummy'
 
         print(dct_plot['Mpos']['variables_day'][0])
         print(dct_plot['Mpos']['variables_night'][0])
@@ -272,7 +282,7 @@ for c in range(2): # day/night column
                     from matplotlib.lines import Line2D
                     legend_elements = [Line2D([0], [0], color='C0', lw=4, label='Pulse'),
                                        Line2D([0], [0], color='C1', lw=4, label='Control'), 
-                                       Line2D([0], [0], color='C2', lw=4, label='EGP')]
+                                       Line2D([0], [0], color='C2', lw=4, label='FHA')]
                     axes[i,c].legend(handles=legend_elements, loc='center')
             except:
                 print('key {} error!'.format(key))

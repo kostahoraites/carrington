@@ -17,8 +17,8 @@
 
 ###carrington:
 
-#SBATCH -M ukko
-##SBATCH -M carrington
+##SBATCH -M ukko
+#SBATCH -M carrington
 #SBATCH --partition=short
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
@@ -102,7 +102,8 @@ export PATH=/proj/jesuni/projappl/tex-basic/texlive/2020/bin/x86_64-linux:$PATH
 
 #run=EGI
 #run=EGL
-run=EGP
+#run=EGP
+run=FHAFGB  # note on FHAFBG (which contain fg_b data): simulation time is frame index *10
 #run=EGILIKE2
 
 #fileprefix=aurora_plot_data_south
@@ -117,7 +118,7 @@ echo $savdir
 #python carrington.py -run EGI -var 6
 #python carrington.py -run EGI -var 1 2 3 4 6
 #python carrington.py -nproc $1 -startstop $2 $3 -deltanframes 1 -run $run -var 1 -save -savefile "$savdir/$fileprefix.csv"
-python carrington.py -nproc $1 -startstop $2 $3 -deltanframes 1 -run $run -var 1 2 3 -latmin 60 -latmax 90 -nlat 301 -nphi 361 -save -savefile "$savdir/$fileprefix.csv"
+python carrington.py -nproc $1 -startstop $2 $3 -deltanframes 1 -run $run -var 1 2 3 -latmin 60 -latmax 90 -nlat 301 -nphi 361 -plot -save -savefile "$savdir/$fileprefix.csv"
 #python carrington.py -nproc $1 -startstop $2 $3 -deltanframes 1 -run $run -var 1 2 3 -plot -latmin -90 -latmax -60 -nlat 301 -nphi 361 -save -suffix "_south" -savefile "$savdir/$fileprefix.csv"
 #python carrington.py -nproc $1 -startstop $2 $3 -deltanframes 1 -run $run -var 3 -plot -latmin 60 -latmax 90 -nlat 31 -nphi 181
 

@@ -49,14 +49,21 @@ def lat_phi_grid( phi_min = -np.pi, phi_max = np.pi, lat_min = -np.pi / 2, lat_m
     return lat, phi
  
 
-def get_all_cell_coordinates(f):
-    # I believe these are volumetric (center of cells)
-    cell_ids = f.read_variable('cellID')
-    x = cell_ids * 0. ; y = cell_ids * 0. ; z = cell_ids * 0.
-    for i, cell_id in enumerate(cell_ids):
-        vec = f.get_cell_coordinates(cell_id)
-        x[i] = vec[0]; y[i] = vec[1]; z[i] = vec[2]
-    return x, y, z
+# slow, old way
+#def get_all_cell_coordinates(f):
+#    # I believe these are volumetric (center of cells)
+#    cell_ids = f.read_variable('cellID')
+#    x = cell_ids * 0. ; y = cell_ids * 0. ; z = cell_ids * 0.
+#    for i, cell_id in enumerate(cell_ids):
+#        vec = f.get_cell_coordinates(cell_id)
+#        x[i] = vec[0]; y[i] = vec[1]; z[i] = vec[2]
+#    return x, y, z
+
+# fast, new way. note: PR not merged, only works on Markku's branch
+# from analysator directory: git checkout alhom
+def get_all_cell_coordinates(f): #wrapper, faster than old implementation above
+    coords = f.read_variable("vg_coordinates")
+    return np.array(coords)[:,0], np.array(coords)[:,1], np.array(coords)[:,2]
 
 
 
@@ -83,6 +90,7 @@ def f_shue_parametrized(theta_polar, r_0, alpha):
     parameters: r_0, alpha ()
     '''
     return r_0 * (2 / (1 + np.cos(theta_polar)))**alpha
+
 
 def f_shue_parameters(run):
     m_p  = 1.67262158e-27              # proton mass [kg]
@@ -1057,8 +1065,12 @@ class FAC_Obj(ParamObj):
                 filename = '{}azim_frame_{}_{}{}{}.png'.format(save_dir, str(self.fileIndex).zfill(5), style, scaled_string, self.file_suffix)
                 #mm = np.nanmax(np.abs([plot_variable_2d[(nlat-delta_lat_ind-1):,:]]))
                 #self.make_polar_plot(phi[(nlat-delta_lat_ind-1):,:], theta[(nlat-delta_lat_ind-1):,:], plot_variable_2d[(nlat-delta_lat_ind-1):,:],
+                if self.run.upper() == 'FHAFGB':
+                    vabs = 0.5
+                else:
+                    vabs = 2.
                 self.make_polar_plot(phi, theta, plot_variable_2d,
-                                     title = title, cbar_label=cbar_label, vmin = -2, vmax = 2,   # vmin = -mm, vmax = mm,
+                                     title = title, cbar_label=cbar_label, vmin = -vabs, vmax = vabs,   # vmin = -mm, vmax = mm,
                                      #vmin = np.nanmin(plot_variable_2d[(nlat-delta_lat_ind-1):,:]), vmax = np.nanmax(plot_variable_2d[(nlat-delta_lat_ind-1):,:]),
                                      cmap = 'bwr', path = filename, **kwargs)
             return plt.gca()
@@ -1266,8 +1278,11 @@ def analyze_data(fileIndex_list):
 
         filename = get_vlsvfile_fullpath(run, fileIndex)
         f = pt.vlsvfile.VlsvReader( filename )
-        r_aurora = (1. * R_EARTH) + 1.1e5   # (110 km altitude) 
-        r_trace = 5 * R_EARTH     
+        r_aurora = (1. * R_EARTH) + 1.1e5   # (110 km altitude)
+        if run == 'FHA' or run == 'FHAFGB': 
+            r_trace = 5.6 * R_EARTH    # matches config tracing radius
+        else:
+            r_trace = 5 * R_EARTH      # other runs
         dx = R_EARTH / 50
         max_iterations = int(4 * r_trace / dx)
         
