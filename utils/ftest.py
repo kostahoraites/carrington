@@ -1,4 +1,3 @@
-from carrington import *
 import pytools as pt
 
 

@@ -29,7 +29,7 @@ Another (more useful) option is to just type 'show' into the command line on tur
 
 ''' 
 
-def get_bulklocation(run, fileIndex):
+def get_bulklocation(run):
     # load data
     if run.upper() == 'EGI':
         location = "/wrk-vakka/group/spacephysics/vlasiator/3D/EGI/bulk/dense_cold_hall1e5_afterRestart374/"
@@ -53,7 +53,8 @@ def get_bulklocation(run, fileIndex):
         location = "/wrk-vakka/group/spacephysics/vlasiator/3D/FHA/bulk1/"
     elif run.upper() == 'FHAFGB':
         location = "/wrk-vakka/group/spacephysics/vlasiator/3D/FHA/bulk_with_fg_10/"
-
+    elif run.upper() == 'FIA':
+        location = "/wrk-vakka/group/spacephysics/vlasiator/3D/FIA/bulk/"
     return location
 
 
@@ -80,12 +81,14 @@ def get_filename(run, fileIndex):
         filename = "bulk1.{}.vlsv".format(str(fileIndex).zfill(7) )
     elif run.upper() == 'FHAFGB':   # test run
         filename = "bulk_with_fg_10.{}.vlsv".format(str(fileIndex).zfill(7) )
+    elif run.upper() == 'FIA':   # test run
+        filename = "bulk1.{}.vlsv".format(str(fileIndex).zfill(7) )
     return filename
 
 
 
 def get_vlsvfile_fullpath(run, fileIndex):
-    return get_bulklocation(run, fileIndex) + get_filename(run, fileIndex)
+    return get_bulklocation(run) + get_filename(run, fileIndex)
 
 
 
@@ -128,6 +131,21 @@ def spherical_to_cartesian(r, theta, phi):
     y = r * np.sin(theta) * np.sin(phi)
     z = r * np.cos(theta)
     return x, y, z
+
+
+def cartesian_to_spherical_vector(vx, vy, vz, x, y, z):
+    '''
+    Convert cartesian vector(s) with coordinates (vx, vy, vz)
+    at the position(s) theta, phi (note: position r does not affect the vector transformation)
+    to spherical coordinates (v_r, v_theta, v_phi)
+
+    dimensions of vx, vy, vz, x, y, z arrays must either match or be a single number
+    '''
+    r, theta, phi = cartesian_to_spherical(x, y, z)
+    v_r =     vx * np.sin(theta) * np.cos(phi) + vy * np.sin(theta) * np.sin(phi) + vz * np.cos(theta)
+    v_theta = vx * np.cos(theta) * np.cos(phi) + vy * np.cos(theta) * np.sin(phi) - vz * np.sin(theta)
+    v_phi =  -vx * np.sin(phi) + vy * np.cos(phi)
+    return v_r, v_theta, v_phi
 
 
 def mkdir_path(path):

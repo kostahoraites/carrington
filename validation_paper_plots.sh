@@ -3,7 +3,7 @@
 
 #SBATCH -J validation_paper_plots
 #SBATCH -t 6:00:00
-#SBATCH -M ukko
+#SBATCH -M carrington
 #SBATCH --partition=short
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
