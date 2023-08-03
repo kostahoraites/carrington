@@ -1,0 +1,39 @@
+[W 10:48:23.010 NotebookApp] Loading JupyterLab as a classic notebook (v6) extension.
+[C 10:48:23.010 NotebookApp] You must use Jupyter Server v1 to load JupyterLab as notebook extension. You have v2.5.0 installed.
+    You can fix this by executing:
+        pip install -U "jupyter-server<2.0.0"
+[I 10:48:23.011 NotebookApp] The port 50002 is already in use, trying another port.
+[I 10:48:23.012 NotebookApp] The port 50003 is already in use, trying another port.
+[I 10:48:23.015 NotebookApp] Serving notebooks from local directory: /wrk-vakka/users/horakons/carrington
+[I 10:48:23.015 NotebookApp] Jupyter Notebook 6.5.4 is running at:
+[I 10:48:23.015 NotebookApp] http://carrington-809:50004/?token=5a78792699bf95e9a7e0d48f020c39d8d2848239c78fddaa
+[I 10:48:23.015 NotebookApp]  or http://127.0.0.1:50004/?token=5a78792699bf95e9a7e0d48f020c39d8d2848239c78fddaa
+[I 10:48:23.015 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[C 10:48:23.021 NotebookApp] 
+    
+    To access the notebook, open this file in a browser:
+        file:///wrk-vakka/turso/home/horakons/.local/share/jupyter/runtime/nbserver-845957-open.html
+    Or copy and paste one of these URLs:
+        http://carrington-809:50004/?token=5a78792699bf95e9a7e0d48f020c39d8d2848239c78fddaa
+     or http://127.0.0.1:50004/?token=5a78792699bf95e9a7e0d48f020c39d8d2848239c78fddaa
+slurmstepd: error: *** JOB 203692289 ON carrington-809 CANCELLED AT 2023-07-28T10:48:30 ***
+slurmstepd: error: *** JOB 203692288 ON carrington-809 CANCELLED AT 2023-07-28T10:48:38 ***
+[W 10:49:52.020 NotebookApp] 404 GET /hub/api (128.214.9.222) 58.540000ms referer=None
+[I 10:49:52.038 NotebookApp] 302 GET /tree? (128.214.9.222) 0.290000ms
+[W 10:49:54.089 NotebookApp] 404 GET /hub/api (128.214.9.222) 1.020000ms referer=None
+[I 10:49:54.092 NotebookApp] 302 GET /tree? (128.214.9.222) 0.300000ms
+[W 10:49:54.516 NotebookApp] 404 GET /hub/api (128.214.9.222) 0.810000ms referer=None
+[I 10:49:54.520 NotebookApp] 302 GET /tree? (128.214.9.222) 0.230000ms
+[W 10:50:38.698 NotebookApp] 404 GET /hub/api (128.214.9.222) 1.320000ms referer=None
+[I 10:50:38.702 NotebookApp] 302 GET /tree? (128.214.9.222) 0.300000ms
+[I 10:50:39.032 NotebookApp] Kernel started: ba60b223-c514-4113-a25f-1c4807606363, name: myconda
+[W 10:50:50.235 NotebookApp] 404 GET /hub/api (128.214.9.222) 1.150000ms referer=None
+[I 10:50:50.237 NotebookApp] 302 GET /tree? (128.214.9.222) 0.260000ms
+[W 11:49:30.921 NotebookApp] 404 GET /hub/api (128.214.9.222) 6.490000ms referer=None
+[I 11:49:30.928 NotebookApp] 302 GET /tree? (128.214.9.222) 0.240000ms
+[W 11:49:31.041 NotebookApp] 404 GET /hub/api (128.214.9.222) 0.630000ms referer=None
+[I 11:49:31.043 NotebookApp] 302 GET /tree? (128.214.9.222) 0.250000ms
+[W 11:49:32.222 NotebookApp] 404 GET /hub/api (128.214.9.222) 1.350000ms referer=None
+[I 11:49:32.260 NotebookApp] 302 GET /tree? (128.214.9.222) 0.240000ms
+[I 16:50:57.899 NotebookApp] Starting buffering for ba60b223-c514-4113-a25f-1c4807606363:1f516b33-4438-463e-85a9-2b8f967e27fa
+slurmstepd: error: *** JOB 203692291 ON carrington-809 CANCELLED AT 2023-07-28T22:53:32 DUE TO TIME LIMIT ***

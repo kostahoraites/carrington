@@ -1,6 +1,8 @@
+##!/appl/easybuild/opt/Python/3.8.2-GCCcore-9.3.0/bin/python
+
 import pytools as pt
 import numpy as np
-from myutils import spherical_to_cartesian, cartesian_to_spherical, get_vlsvfile_fullpath, timer, save, mkdir_path
+from myutils import spherical_to_cartesian, cartesian_to_spherical, get_vlsvfile_fullpath, timer, save, mkdir_path, restore
 from carrington import get_all_cell_coordinates
 import matplotlib.pyplot as plt
 from numba import jit
@@ -60,10 +62,12 @@ def biot_savart(coord_list, f, f_sidecar = None, rmin = 5 * 6.371e6):
 
     cellids = f.read_variable('CellID')
     ncells = cellids.size
-    dx = ((f.read_parameter('xmax') - f.read_parameter('xmin')) / f.read_parameter('xcells_ini')) # refinement lvl 0
+    dx = ((f.read_parameter('xmax') - f.read_parameter('xmin')) / f.read_parameter('xcells_ini')) # refinement lvl 0 (coarsest)
     dV = np.zeros(ncells)
     for i, cellid in enumerate(cellids):
         dV[i] = dx**3 / 2**(3*f.get_amr_level(cellid))
+
+    
 
     # load or calculate currents
 
@@ -88,8 +92,10 @@ def biot_savart(coord_list, f, f_sidecar = None, rmin = 5 * 6.371e6):
     #B = np.zeros([ncoords, 3])
 
     vg_r, vg_theta, vg_phi = cartesian_to_spherical(vg_x, vg_y, vg_z)
+    ind_r = np.where(vg_r < R_EARTH)[0]
+    dx_1re = dx / 2**np.nanmin(f.get_amr_level(cellids[ind_r]))   # grid resolution dx at radius 1 RE (well inside inner boundary)
     outer, = np.where(vg_r >= rmin)
-    inner, = np.where((vg_r < rmin) & (vg_r > R_EARTH))
+    inner, = np.where((vg_r < rmin) & (vg_r > (R_EARTH + dx_1re/2)))  # only integrate over cells whose centers are at least 1/2 a cell length beyond radius of 1 R_E
 
     vg_J_eval = np.zeros(vg_J.shape) # the currents that will actually be integrated over
     vg_J_eval[outer] = vg_J[outer]
@@ -101,18 +107,14 @@ def biot_savart(coord_list, f, f_sidecar = None, rmin = 5 * 6.371e6):
     if f_sidecar is None:
         # map: initial point -> downmap to ionosphere via dipole formula (ionospheric runs, e.g. FHA)
         coords_ionosphere = f.get_ionosphere_node_coords()  # [npts, 3]
-        ig_fac = f.read_variable('ig_fac')
+        ig_fac = f.read_variable('ig_fac')      # [npts]
         vg_b_vol_magnitude = np.sqrt(vg_b_vol[:,0]**2 + vg_b_vol[:,1]**2 + vg_b_vol[:,2]**2 )
-        #vg_b_vol_hat = np.zeros(vg_b_vol.shape)
-        #vg_b_vol_hat[:,0] = vg_b_vol[:,0] / vg_b_vol_magnitude
-        #vg_b_vol_hat[:,1] = vg_b_vol[:,1] / vg_b_vol_magnitude
-        #vg_b_vol_hat[:,2] = vg_b_vol[:,2] / vg_b_vol_magnitude
 
         lat0 = np.arccos( np.sqrt(R_EARTH / L) ) # latitude at r=R_EARTH
         theta0 = (np.pi / 2) - lat0
         b0 = b_dip_magnitude(theta0, R_EARTH, mag_mom = 8e22)
-        #x0, y0, z0 = spherical_to_cartesian(R_EARTH, lat0[inner], theta0[inner])   # TYPO?? the last argument should be phi
-        x0, y0, z0 = spherical_to_cartesian(R_EARTH, theta0[inner], vg_phi[inner])    # trying this fix
+        #x0, y0, z0 = spherical_to_cartesian(R_EARTH, lat0[inner], theta0[inner])   # TYPO?? the last argument should be phi ...
+        x0, y0, z0 = spherical_to_cartesian(R_EARTH, theta0[inner], vg_phi[inner])    # ... trying this fix
         for i in range(x0.size):
             # find the nearest cell and evaluate the current there (brute force)
             # this approach is probably faster: https://github.com/fmihpc/vlasiator/blob/master/sysboundary/ionosphere.cpp#L381
@@ -120,21 +122,24 @@ def biot_savart(coord_list, f, f_sidecar = None, rmin = 5 * 6.371e6):
             dist = np.sqrt((x0[i] - coords_ionosphere[:,0])**2 + (y0[i] - coords_ionosphere[:,1])**2 + (z0[i] - coords_ionosphere[:,2])**2)    # trying this fix
             ind_min = np.argmin(dist)
             #vg_J_eval[inner[i], :] = vg_b_vol_hat[inner[i],:]  * (vg_b_vol_magnitude[inner[i]] / b0[inner[i]])  * ig_fac[ind_min]  # J \propto B 
-            vg_J_eval[inner[i], :] = (vg_b_vol[inner[i],:] / b0[inner[i]])  * ig_fac[ind_min]  # J \propto B 
-    else:
+            vg_J_eval[inner[i], :] = (vg_b_vol[inner[i],:] / b0[inner[i]])  * ig_fac[ind_min]  # J \propto B. Mapping UP from the FACs evaluated at the ground 
+    else: # (non-ionospheric runs, e.g. EGL)
         # map: initial point -> some point in the simulation domain near the inner boundary (~5 R_E) according to dipole formula
         print('NOTE: Upmapping FACs along constant L-shell via dipole formula!')
         r_up = 5 * R_EARTH
         lat_up = np.arccos( np.sqrt(r_up / L) ) # latitude at r=r_up
         theta_up = (np.pi / 2) - lat_up
-        # x_up, y_up, z_up = spherical_to_cartesian(r_up, lat_up[inner], vg_phi[inner])   # TYPO??
-        x_up, y_up, z_up = spherical_to_cartesian(r_up, theta_up[inner], vg_phi[inner])   # trying this fix
-        b_up = b_dip_magnitude(theta_up[inner], r_up, mag_mom = 8e22)
+        # x_up, y_up, z_up = spherical_to_cartesian(r_up, lat_up[inner], vg_phi[inner])   # TYPO?? ...
+        x_up, y_up, z_up = spherical_to_cartesian(r_up, theta_up[inner], vg_phi[inner])   # ... trying this fix
+        b_up = b_dip_magnitude(theta_up[inner], r_up, mag_mom = 8e22)        # Maybe should read the actual simulation magnetic field strength here?
         b_down = b_dip_magnitude(vg_theta[inner], vg_r[inner], mag_mom = 8e22)
+        b_dir = b_dip_direction(vg_x[inner], vg_y[inner], vg_z[inner])
+        #vg_b_vol_hat[:,2] = vg_b_vol[:,2] / vg_b_vol_magnitude
         ind_fin, = np.where(np.isfinite(lat_up[inner]))
         coords_temp = list(np.array([x_up[ind_fin],y_up[ind_fin],z_up[ind_fin]]).T.reshape([ind_fin.size,3]))
         scale_factor = np.array(list(b_down[ind_fin] / b_up[ind_fin])*3).reshape(3,ind_fin.size).T                # multiply each vector component by scale_factor
-        vg_J_eval[inner[ind_fin], :] = f_sidecar.read_interpolated_variable("vg_J", coords_temp) * scale_factor   # scale_factor: J \propto B
+        J_magnitude_up = np.array([np.linalg.norm(f_sidecar.read_interpolated_variable("vg_J", coords_temp), axis = 1)] * 3).transpose()   # shape [ind_fin.size, 3]   (repetition by 3)
+        vg_J_eval[inner[ind_fin], :] = b_dir[ind_fin, :] * J_magnitude_up * scale_factor   # scale_factor: J \propto B. Mapping DOWN from the FACs evaluated in the simulation domain near inner boundary
 
 
     # 'outer' magnetopsheric contribution given by Vlasiator currents
@@ -152,6 +157,15 @@ def b_dip_magnitude(theta, r, mag_mom = 8e22):
     B_magnitude = mag_mom * (mu_0 / (4 * np.pi * r**3)) * np.sqrt((2*np.cos(theta))**2 + (np.sin(theta))**2)
     return B_magnitude
 
+
+def b_dip_direction(x, y, z, mag_mom_vector = np.array([0., 0., -8e22])):
+    N = x.size
+    pos_N = np.array([x, y, z]).transpose()    # shape (N, 3)
+    m_N = np.array([list(mag_mom_vector)]*N)  # shape (N, 3)
+    r_N = np.array([np.linalg.norm(pos_N, axis = 1)] * 3).transpose()   # radius, shape (N, 3)
+    # dipole field:  B(r) = (mu_0 / 4 pi) * (3r (m dot r) / r^5 - m / r^3)
+    B = (mu_0 / (4 * np.pi)) * ( ( 3 * pos_N * np.array([np.sum(m_N * pos_N, axis = 1)]*3).transpose() / r_N**5) - m_N / r_N**3 )
+    return B / np.array([np.linalg.norm(B, axis = 1)] * 3).transpose()
 
 
 @jit(nopython=True)
@@ -209,7 +223,7 @@ def calc_Dst(f, f_sidecar = None, rmin = 5 * 6.371e6):
     3. Ionospheric Hall currents
     4. Ionospheric Pedersen currents
     '''
-    coord_list = [np.array([R_EARTH, 0, 0]), np.array([0,R_EARTH,0]), np.array([-R_EARTH,0,0]), np.array([0,-R_EARTH,0])]
+    coord_list = [np.array([R_EARTH, 0, 0]), np.array([0,R_EARTH,0]), np.array([-R_EARTH,0,0]), np.array([0,-R_EARTH,0])]  # 4 virtual magnetometers around the equator used to calculate Dst
     B_inner, B_outer = biot_savart(coord_list, f, f_sidecar = f_sidecar, rmin = rmin)    
     B = B_inner+ B_outer
     Dst = np.average(B[:,2])   # for more general formula (non-equatorial), need to include cos(theta) factor
@@ -268,7 +282,11 @@ def save_B_vlsv(input_tuple):
     # calculate magnetic fields
     ig_r = get_ig_r(f_iono)                     # f_iono contains the ionospheric mesh (the locations where B is evaluated)
     B_iono = B_ionosphere(f, ig_r = ig_r)
-    B_inner, B_outer = B_magnetosphere(f, f_sidecar = f_sidecar, rmin = 5 * 6.371e6, ig_r = ig_r)
+    try:   # UNTESTED (as of 28.7.2023 the .vslv sidecar and visit plots assumed rmin=5 RE for EGL, FHA, FIA. need to rerun with this try/except block )
+        rmin = float(f.get_config()['ionosphere']['downmapRadius'][0]) * R_EARTH
+    except: #EGL
+        rmin = 5 * 6.371e6
+    B_inner, B_outer = B_magnetosphere(f, f_sidecar = f_sidecar, rmin = rmin, ig_r = ig_r)
     # write to file
     filename_vlsv = save_dir + 'ionosphere_B_sidecar_{}.{}.vlsv'.format(run, str(fileIndex).zfill(7))
     mkdir_path(filename_vlsv)
@@ -283,17 +301,21 @@ def save_B_vlsv(input_tuple):
 
 def plot_Dst(run, start, stop, step):
     t = np.arange(start, stop +1, step )
-    Dsts = np.zeros(int((stop - start + 1) / step))
+    #Dsts = np.zeros(int((stop - start + 1) / step))
+    Dsts = np.array(list(range(start, stop, step)))*0.0   # weird way to initialize array, but want the for loop to work
     for i, fileIndex in enumerate(range(start, stop, step)):
     #for i, fileIndex in enumerate(range(start, stop + 1, step)):
-        if run == 'EGL':
-            f_sidecar = pt.vlsvfile.VlsvReader('/wrk-vakka/group/spacephysics/vlasiator/3D/EGL/visualizations_2/ballooning/jlsidecar_bulk1.egl.{}.vlsv'.format(str(fileIndex).zfill(7)))
-        else:
-            f_sidecar = None
-        filename = get_vlsvfile_fullpath(run, fileIndex)
-        f = pt.vlsvfile.VlsvReader(filename)
-        Dst = calc_Dst(f, f_sidecar = f_sidecar, rmin = 5 * 6.371e6)
-        Dsts[i] = Dst
+        try:
+            if run == 'EGL':
+                f_sidecar = pt.vlsvfile.VlsvReader('/wrk-vakka/group/spacephysics/vlasiator/3D/EGL/visualizations_2/ballooning/jlsidecar_bulk1.egl.{}.vlsv'.format(str(fileIndex).zfill(7)))
+            else:
+                f_sidecar = None
+            filename = get_vlsvfile_fullpath(run, fileIndex)
+            f = pt.vlsvfile.VlsvReader(filename)
+            Dst = calc_Dst(f, f_sidecar = f_sidecar, rmin = 5 * 6.371e6)
+            Dsts[i] = Dst
+        except:   # IndexError?
+            print("Tried index {}, Dsts array size {}".format(i, Dsts.size))
     plt.plot(t, Dsts * 1e9)
     plt.xlabel('t [sec]')
     plt.ylabel('Dst [nT]')
@@ -305,7 +327,19 @@ def plot_Dst(run, start, stop, step):
     save(savefile, t = t, Dsts = Dsts)
 
 
-
+def plot_Dsts(runs):
+    # overplot the (saved) Dst data for every run in the list of strings "runs"
+    s = ''
+    for run in runs:
+        s = s+'_'+run
+        savefile = '/wrk-vakka/users/horakons/carrington/data/{}/Dst/Dst_{}.pickle'.format(run, run)
+        data = restore(savefile)
+        plt.plot(data['t'], data['Dsts']*1e9, label = run)
+    plt.xlabel('time [sec]')
+    plt.ylabel('Dst [nT]')
+    plt.legend()
+    figfile = '/wrk-vakka/users/horakons/carrington/plots/{}/Dst/Dst{}.png'.format(runs[0], s)
+    plt.savefig(figfile)
 
 
 
@@ -326,7 +360,9 @@ if __name__ == '__main__':
     elif run == 'FIA':
         first = 1
         last = 865
-    # integrate Biot-Savart and save output into .vlsv files
+
+    
+    # 1. integrate Biot-Savart and save output into .vlsv files (modify biot_savart.sh to be multi-processor)
     from multiprocessing import Pool
     pool = Pool(int(ARGS.nproc))
     start = first + (int(ARGS.task) * int(ARGS.nproc))
@@ -336,114 +372,14 @@ if __name__ == '__main__':
     f_out = pool.map(save_B_vlsv, input_list)
     pool.close()
     pool.join()
-    # make a plot of Dst vs time
-    #plot_Dst(run, first, last, 20)
 
     '''
-    ## main file
-    ############ EGL
-    start = 621
-    stop = 1760
-    step = 20
-    t = np.arange(start, stop +1, step )
-    Dsts = np.zeros(int((stop - start + 1) / step))
-    for i, fileIndex in enumerate(range(start, stop + 1, step)):
-        filename = get_vlsvfile_fullpath('EGL', fileIndex) 
-        f = pt.vlsvfile.VlsvReader(filename)
-        f_sidecar = pt.vlsvfile.VlsvReader('/wrk-vakka/group/spacephysics/vlasiator/3D/EGL/visualizations_2/ballooning/jlsidecar_bulk1.egl.{}.vlsv'.format(str(fileIndex).zfill(7)))
-    #    print(i, f_sidecar)
-        Dst = calc_Dst(f, f_sidecar = f_sidecar, rmin = 5 * 6.371e6)
-    #    print(Dst)
-        Dsts[i] = Dst
-    plt.plot(t, Dsts * 1e9)
-    plt.xlabel('t [sec]')
-    plt.ylabel('Dst [nT]')
-    #plt.savefig('/wrk-vakka/users/horakons/carrington/plots/EGL/Dst/Dst_EGL.png')
-    #save('/wrk-vakka/users/horakons/carrington/data/EGL/Dst/Dst_EGL.pickle', t = t, Dsts = Dsts)
-    ##
-    ############ FHA
-    start = 501
-    stop = 1500
-    step = 20
-    t = np.arange(start, stop +1, step )
-    Dsts = np.zeros(int((stop - start + 1) / step))
-    for i, fileIndex in enumerate(range(start, stop + 1, step)):
-        filename = get_vlsvfile_fullpath('FHA', fileIndex) 
-        f = pt.vlsvfile.VlsvReader(filename)
-        f_sidecar = None
-        #print(i, f_sidecar)
-        Dst = calc_Dst(f, f_sidecar = f_sidecar, rmin = 5 * 6.371e6)
-        #print(Dst)
-        Dsts[i] = Dst
-    plt.plot(t, Dsts * 1e9)
-    plt.xlabel('t [sec]')
-    plt.ylabel('Dst [nT]')
-    #plt.savefig('/wrk-vakka/users/horakons/carrington/plots/FHA/Dst/Dst_FHA.png')
-    plt.savefig('/wrk-vakka/users/horakons/carrington/plots/FHA/Dst/Dst_FHA_EGL.png')
-    #save('/wrk-vakka/users/horakons/carrington/data/FHA/Dst/Dst_FHA.pickle', t = t, Dsts = Dsts)
-    ############ FIA
-    start = 501
-    stop = 1500
-    step = 20
-    t = np.arange(start, stop +1, step )
-    Dsts = np.zeros(int((stop - start + 1) / step))
-    for i, fileIndex in enumerate(range(start, stop + 1, step)):
-        filename = get_vlsvfile_fullpath('FHA', fileIndex) 
-        f = pt.vlsvfile.VlsvReader(filename)
-        f_sidecar = None
-        #print(i, f_sidecar)
-        Dst = calc_Dst(f, f_sidecar = f_sidecar, rmin = 5 * 6.371e6)
-        #print(Dst)
-        Dsts[i] = Dst
-    plt.plot(t, Dsts * 1e9)
-    plt.xlabel('t [sec]')
-    plt.ylabel('Dst [nT]')
-    #plt.savefig('/wrk-vakka/users/horakons/carrington/plots/FHA/Dst/Dst_FHA.png')
-    plt.savefig('/wrk-vakka/users/horakons/carrington/plots/FHA/Dst/Dst_FHA_EGL.png')
-    #save('/wrk-vakka/users/horakons/carrington/data/FHA/Dst/Dst_FHA.pickle', t = t, Dsts = Dsts)
+    # 2. (requires #1) make a plot of Dst vs time (modify biot_savart.sh to use 1 node)
+    plot_Dst(run, first, last, 20)   # FIA plot wasn't working due to file permissions
+
+    # 3. (requires #1 and #2) make Dst plots as in #2, of multiple runs
+    plot_Dsts(['EGL', 'FHA', 'FIA'])
     '''
-
-##
-    #fileIndex = 1100        # note: ig_inplanecurrent variable doesn't exist in all FHA files!
-    #filename = get_vlsvfile_fullpath('FHA', fileIndex) 
-    #f = pt.vlsvfile.VlsvReader(filename)
-    #f_sidecar = None
-    #Dst = calc_Dst(f, f_sidecar = f_sidecar, rmin = 5 * 6.371e6)
-    ## ionospheric grid
-    #coord_list = get_ig_r(filename = '/wrk-vakka/group/spacephysics/vlasiator/temp/ionogrid_FHA.vlsv') 
-    ## compute B
-    #B_inner, B_outer = biot_savart(coord_list, f, f_sidecar = f_sidecar)
-    #B_ionosphere = B_ionosphere(f, f_sidecar = f_sidecar, rmin = 5 * 6.371e6)
-    #
-    #
-    ### EGL:
-    #from multiprocessing import Pool
-    #pool = Pool(int(ARGS.nproc))
-    #run = ARGS.run
-    #if run == 'EGL':
-    #    start = 621 + (int(ARGS.task) * int(ARGS.nproc))
-    #elif run == 'FHA':
-    #    start = 501 + (int(ARGS.task) * int(ARGS.nproc))
-    #    #start = 757 + (int(ARGS.task) * int(ARGS.nproc))
-    #stop = start + int(ARGS.nproc)
-    #print('start:, ', start, ', stop: ', stop)
-    #input_list = [(run, i) for i in range(start, stop)]
-    #f_out = pool.map(save_B_vlsv, input_list)
-    #pool.close()
-    #pool.join()
-    #
-    #
-    #
-    #### FHA:
-    #from multiprocessing import Pool
-    #pool = Pool(int(ARGS.nproc))
-    #input_list = [('FHA', i) for i in range(501, 1171)]
-    #f_out = pool.map(save_B_vlsv, input_list)
-    #pool.close()
-    #pool.join()
-
-    #save_B_vlsv( ('FHA', 600) )
-
 
 
 

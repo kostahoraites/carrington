@@ -30,16 +30,21 @@ def static_field_tracer3d( vlsvReader, x0, max_iterations, dx, direction='+', bv
    f = vlsvReader
    # Read cellids in order to sort variables
    cellids = vlsvReader.read_variable("CellID")
+   xsize = bvar.shape[0]
+   ysize = bvar.shape[1]
+   zsize = bvar.shape[2]
+   '''   DELETE THIS after testing. this gives the resolution of the "base grid", i.e. the coarsest cells in the simulation
    xsize = f.read_parameter("xcells_ini")
    ysize = f.read_parameter("ycells_ini")
    zsize = f.read_parameter("zcells_ini")
+   '''
    xmin = f.read_parameter('xmin')
    xmax = f.read_parameter('xmax')
    ymin = f.read_parameter('ymin')
    ymax = f.read_parameter('ymax')
    zmin = f.read_parameter('zmin')
    zmax = f.read_parameter('zmax')
-   
+
    # Read face_B:
    if type(bvar) == np.ndarray:
       face_B = bvar

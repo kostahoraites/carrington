@@ -166,9 +166,6 @@ def static_field_tracer3d( vlsvReader, x0, max_iterations, dx, direction='+', bv
    f = vlsvReader
    # Read cellids in order to sort variables
    cellids = vlsvReader.read_variable("CellID")
-   xsize = f.read_parameter("xcells_ini")
-   ysize = f.read_parameter("ycells_ini")
-   zsize = f.read_parameter("zcells_ini")
    xmin = f.read_parameter('xmin')
    xmax = f.read_parameter('xmax')
    ymin = f.read_parameter('ymin')
