@@ -33,12 +33,12 @@ ARGS = parser.parse_args()
 
 
 @timer
-def biot_savart(coord_list, f, f_sidecar = None, r_io = 5 * 6.371e6):
+def biot_savart(coord_list, f, f_J_sidecar = None, r_io = 5 * 6.371e6):
     '''
     param coord_list:   a list of 3-element arrays of coordinates [ [x1,y1,z1], [x2,y2,z2], ... ], SI units
                         if considering just a single starting point, the code accepts a 3-element array-like object [x1,y1,z1]
     f: vlsvReader object
-    f_sidecar: vlsvReader object that contains pre-computed current 'vg_J'
+    f_J_sidecar: vlsvReader object that contains pre-computed current 'vg_J'
         e.g., for EGL, files at: /wrk-vakka/group/spacephysics/vlasiator/3D/EGL/visualizations_2/ballooning/*.vlsv
 
     runtime (FHA): overhead of about 200 sec (setup), plus 0.2 sec for each element of coord_list
@@ -67,11 +67,9 @@ def biot_savart(coord_list, f, f_sidecar = None, r_io = 5 * 6.371e6):
     for i, cellid in enumerate(cellids):
         dV[i] = dx**3 / 2**(3*f.get_amr_level(cellid))
 
-    
-
     # load or calculate currents
 
-    if f_sidecar is None:
+    if f_J_sidecar is None:
         # calculate directly from B-field Jacobian (ionospheric runs, e.g. FHA)
         vg_J = np.zeros([ncells,3])
         vg_dperbxvoldy = f.read_variable('vg_dperbxvoldy')
@@ -85,7 +83,7 @@ def biot_savart(coord_list, f, f_sidecar = None, r_io = 5 * 6.371e6):
         vg_J[:,2] = (1 / mu_0) * (vg_dperbyvoldx - vg_dperbxvoldy)
         # FILL IN: if above doesn't work, calculate J from fg_b and resample to vg grid
     else:
-        vg_J = f_sidecar.read_variable('vg_J')
+        vg_J = f_J_sidecar.read_variable('vg_J')
 
     # compute B at 'coord_list' points according to Biot-Savart law (accelerate with numba?)
 
@@ -104,7 +102,7 @@ def biot_savart(coord_list, f, f_sidecar = None, r_io = 5 * 6.371e6):
     L = vg_r /  np.cos(vg_lat)**2           # L-shell (dipole) [m]
 
     # evaluate FACs in 'inner' region (outside of simulation domain)
-    if f_sidecar is None:
+    if f_J_sidecar is None:
         # map: initial point -> downmap to ionosphere via dipole formula (ionospheric runs, e.g. FHA)
         coords_ionosphere = f.get_ionosphere_node_coords()  # [npts, 3]
         ig_fac = f.read_variable('ig_fac')      # [npts]
@@ -119,7 +117,7 @@ def biot_savart(coord_list, f, f_sidecar = None, r_io = 5 * 6.371e6):
             # this approach is probably faster: https://github.com/fmihpc/vlasiator/blob/master/sysboundary/ionosphere.cpp#L381
             dist = np.sqrt((x0[i] - coords_ionosphere[:,0])**2 + (y0[i] - coords_ionosphere[:,1])**2 + (z0[i] - coords_ionosphere[:,2])**2)
             ind_min = np.argmin(dist)
-            vg_J_eval[inner[i], :] = (vg_b_vol[inner[i],:] / b0[inner[i]])  * ig_fac[ind_min]  # J \propto B. Mapping UP from the FACs evaluated at the ground 
+            vg_J_eval[inner[i], :] = (vg_b_vol[inner[i],:] / b0[inner[i]]) * ig_fac[ind_min]  # J \propto B. Mapping UP from the FACs evaluated at the ground 
     else: # (use sidecar containing current density "vg_J" in non-ionospheric runs, e.g. EGL)
         # map: initial point -> some point in the simulation domain near the inner boundary (~5 R_E) according to dipole formula
         print('NOTE: Upmapping FACs along constant L-shell via dipole formula!')
@@ -129,11 +127,11 @@ def biot_savart(coord_list, f, f_sidecar = None, r_io = 5 * 6.371e6):
         x_up, y_up, z_up = spherical_to_cartesian(r_up, theta_up[inner], vg_phi[inner])
         ind_fin, = np.where(np.isfinite(lat_up[inner]))
         coords_temp = list(np.array([x_up[ind_fin],y_up[ind_fin],z_up[ind_fin]]).T.reshape([ind_fin.size,3]))
-        vg_b_vol_fin = f_sidecar.read_interpolated_variable("vg_b_vol", coords_temp)
+        vg_b_vol_fin = f_J_sidecar.read_interpolated_variable("vg_b_vol", coords_temp)
         B_up = np.array([np.linalg.norm(vg_b_vol_fin, axis = 1)] * 3).transpose()
         B_down = np.array([b_dip_magnitude(vg_theta[inner[ind_fin]], vg_r[inner[ind_fin]], mag_mom = 8e22)] * 3).transpose()
         scale_factor = B_down / B_up                                        # J \propto B
-        vg_J = f_sidecar.read_interpolated_variable("vg_J", coords_temp)
+        vg_J = f_J_sidecar.read_interpolated_variable("vg_J", coords_temp)
         J_signed_up = np.array([np.sum(vg_J * vg_b_vol_fin, axis = 1) ] * 3).transpose() / B_up    # magnitude and sign of J   (projection J dot B / |B|)
         b_dir = b_dip_direction(vg_x[inner[ind_fin]], vg_y[inner[ind_fin]], vg_z[inner[ind_fin]])
         vg_J_eval[inner[ind_fin], :] = b_dir * J_signed_up * scale_factor   # Mapping DOWN from the FACs evaluated in the simulation domain near inner boundary
@@ -211,7 +209,7 @@ def get_ig_r(f):
 
 
 
-def calc_Dst(f, f_sidecar = None, r_io = 5 * 6.371e6):
+def calc_Dst(f, f_J_sidecar = None, r_io = 5 * 6.371e6):
     '''
     Follow Welling et al. (2020) approach for calculating Dst. Integrate Biot-Savart over:
     1. All currents within the Vlasov domain
@@ -221,7 +219,7 @@ def calc_Dst(f, f_sidecar = None, r_io = 5 * 6.371e6):
     4. Ionospheric Pedersen currents
     '''
     coord_list = [np.array([R_EARTH, 0, 0]), np.array([0,R_EARTH,0]), np.array([-R_EARTH,0,0]), np.array([0,-R_EARTH,0])]  # 4 virtual magnetometers around the equator used to calculate Dst
-    B_inner, B_outer = biot_savart(coord_list, f, f_sidecar = f_sidecar, r_io = r_io)    
+    B_inner, B_outer = biot_savart(coord_list, f, f_J_sidecar = f_J_sidecar, r_io = r_io)    
     B = B_inner+ B_outer
     Dst = np.average(B[:,2])   # for more general formula (non-equatorial), need to include cos(theta) factor
     return Dst
@@ -245,11 +243,11 @@ def B_ionosphere(f, ig_r = None):
 
 
 
-def B_magnetosphere(f, f_sidecar = None, r_io = 5 * 6.371e6, ig_r = None):
+def B_magnetosphere(f, f_J_sidecar = None, r_io = 5 * 6.371e6, ig_r = None):
     # wrapper for biot_savart()
     if ig_r is None:
         ig_r = get_ig_r(f)
-    B_inner, B_outer = biot_savart( list(ig_r), f, f_sidecar = f_sidecar, r_io = r_io )
+    B_inner, B_outer = biot_savart( list(ig_r), f, f_J_sidecar = f_J_sidecar, r_io = r_io )
     return B_inner, B_outer
 
 
@@ -265,15 +263,15 @@ def save_B_vlsv(input_tuple):
     filename = get_vlsvfile_fullpath( run, fileIndex)
     f = pt.vlsvfile.VlsvReader( filename )      # f contains the vg_ mesh over which Biot-Savart is integrated
     if run == 'EGL':
-        f_sidecar = pt.vlsvfile.VlsvReader('/wrk-vakka/group/spacephysics/vlasiator/3D/EGL/visualizations_2/ballooning/jlsidecar_bulk1.egl.{}.vlsv'.format(str(fileIndex).zfill(7)))
+        f_J_sidecar = pt.vlsvfile.VlsvReader('/wrk-vakka/group/spacephysics/vlasiator/3D/EGL/visualizations_2/ballooning/jlsidecar_bulk1.egl.{}.vlsv'.format(str(fileIndex).zfill(7)))
         f_iono = pt.vlsvfile.VlsvReader( '/wrk-vakka/group/spacephysics/vlasiator/temp/ionogrid_FHA.vlsv' )
         save_dir = '/wrk-vakka/group/spacephysics/vlasiator/3D/EGL/sidecars/ig_B/'
     elif run == 'FHA':
-        f_sidecar = None
+        f_J_sidecar = None
         f_iono = f
         save_dir = '/wrk-vakka/group/spacephysics/vlasiator/3D/FHA/bulk1_sidecars/ig_B/'
     elif run == 'FIA':
-        f_sidecar = None
+        f_J_sidecar = None
         f_iono = f
         save_dir = '/wrk-vakka/group/spacephysics/vlasiator/3D/FIA/bulk_sidecars/ig_B/'
     # calculate magnetic fields
@@ -283,7 +281,7 @@ def save_B_vlsv(input_tuple):
         r_io = float(f.get_config()['ionosphere']['downmapRadius'][0]) * R_EARTH
     except: #EGL
         r_io = 5 * 6.371e6
-    B_inner, B_outer = B_magnetosphere(f, f_sidecar = f_sidecar, r_io = r_io, ig_r = ig_r)
+    B_inner, B_outer = B_magnetosphere(f, f_J_sidecar = f_J_sidecar, r_io = r_io, ig_r = ig_r)
     # write to file
     filename_vlsv = save_dir + 'ionosphere_B_sidecar_{}.{}.vlsv'.format(run, str(fileIndex).zfill(7))
     mkdir_path(filename_vlsv)
@@ -304,12 +302,12 @@ def plot_Dst(run, start, stop, step):
     #for i, fileIndex in enumerate(range(start, stop + 1, step)):
         try:
             if run == 'EGL':
-                f_sidecar = pt.vlsvfile.VlsvReader('/wrk-vakka/group/spacephysics/vlasiator/3D/EGL/visualizations_2/ballooning/jlsidecar_bulk1.egl.{}.vlsv'.format(str(fileIndex).zfill(7)))
+                f_J_sidecar = pt.vlsvfile.VlsvReader('/wrk-vakka/group/spacephysics/vlasiator/3D/EGL/visualizations_2/ballooning/jlsidecar_bulk1.egl.{}.vlsv'.format(str(fileIndex).zfill(7)))
             else:
-                f_sidecar = None
+                f_J_sidecar = None
             filename = get_vlsvfile_fullpath(run, fileIndex)
             f = pt.vlsvfile.VlsvReader(filename)
-            Dst = calc_Dst(f, f_sidecar = f_sidecar, r_io = 5 * 6.371e6)
+            Dst = calc_Dst(f, f_J_sidecar = f_J_sidecar, r_io = 5 * 6.371e6)
             Dsts[i] = Dst
         except:   # IndexError?
             print("Tried index {}, Dsts array size {}".format(i, Dsts.size))
@@ -358,7 +356,7 @@ if __name__ == '__main__':
         first = 1
         last = 865
 
-    
+ 
     # 1. integrate Biot-Savart and save output into .vlsv files (modify biot_savart.sh to be multi-processor)
     from multiprocessing import Pool
     pool = Pool(int(ARGS.nproc))
@@ -373,7 +371,7 @@ if __name__ == '__main__':
     '''
     # 2. (requires #1) make a plot of Dst vs time (modify biot_savart.sh to use 1 node)
     plot_Dst(run, first, last, 20)   # FIA plot wasn't working due to file permissions
-
+    
     # 3. (requires #1 and #2) make Dst plots as in #2, of multiple runs
     plot_Dsts(['EGL', 'FHA', 'FIA'])
     '''
