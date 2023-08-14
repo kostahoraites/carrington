@@ -416,3 +416,4 @@ AssertionError
 [W 19:44:16.276 NotebookApp] 403 GET /api/kernels?1691772256273 (128.214.9.222) 0.560000ms referer=None
 [W 19:44:16.277 NotebookApp] Forbidden
 [W 19:44:16.277 NotebookApp] 403 GET /api/kernelspecs?1691772256275 (128.214.9.222) 0.310000ms referer=None
+slurmstepd: error: *** JOB 203693492 ON carrington-802 CANCELLED AT 2023-08-12T03:24:51 ***

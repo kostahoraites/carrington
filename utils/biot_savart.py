@@ -6,6 +6,7 @@ from myutils import spherical_to_cartesian, cartesian_to_spherical, get_vlsvfile
 from carrington import get_all_cell_coordinates
 import matplotlib.pyplot as plt
 from numba import jit
+# import numba
 from memory_profiler import profile      # @profile decorator
 
 global R_EARTH
@@ -30,9 +31,84 @@ global ARGS
 ARGS = parser.parse_args()
 #nproc = ARGS.nproc
 
+@timer
+def graded_mesh(x, y, z, dV, dx_0, ns = np.array([8, 4, 2]), Rs = np.array([R_EARTH, R_EARTH*2, R_EARTH*4])):
+    '''
+    Calls refine mesh with different refinement factors n, at specified refinement boundaries
+    ns: numpy array of refinement factors (ints)
+    Rs: numpy array of refinement boundary radii [R_E]
+    edge case: arrays are aligned so that for r>Rs[-1], use ns[-1] refinement
+
+    Want the refinement level to roughly scale as 1/r. To roughly resolve the mapped features at all radii
+    This works because magnetic dipole field goes as 1/r^2, roughly, and area A goes as r^2. 
+    (Want B*A=constant to resolve features mapped along field lines)
+
+    Example: graded_mesh(x, y, z, dV, dx_0, ns = np.array([8, 4, 2]), Rs = np.array([R_EARTH, R_EARTH*2, R_EARTH*4]))
+        --> refines mesh size dx_0 by factor of 8 for 1 RE<r<=2 RE, by factor of 4 for 2 RE<r<=4 RE, by factor of 2 for r>4 RE
+    '''
+
+    try:
+        print("dx_0 already an array: dx_0[1] = ", dx_0[1])
+    except:
+        dx_0_arr = np.repeat(dx_0, x.size)
+        
+    #if type(dx_0) == float or type(dx_0) == np.float64:
+    ##if numba.typeof(dx_0) == numba.float64:
+    #    dx_0_arr = np.repeat(dx_0, x.size)
+    #else:
+    #    dx_0_arr = dx_0
+
+    x_out = np.array([])
+    y_out = np.array([])
+    z_out = np.array([])
+    dV_out = np.array([])
+    r = np.sqrt(x**2 + y**2 + z**2)
+
+    for i in range(ns.size):
+        #try:
+        print('i:', i)
+        if i < ns.size - 1:
+            ind, = np.where((r > Rs[i]) & (r <= Rs[i+1]))
+        elif i == ns.size -1:
+            ind, = np.where(r > Rs[i])
+        print('ind size', ind.size)
+        print(type(x), type(y), type(z), type(dV), type(dx_0_arr), type(ns))
+        print(x.shape, y.shape, z.shape, dV.shape, dx_0_arr.shape, ns.shape)
+        x_ref, y_ref, z_ref, dV_ref = refine_mesh(x[ind], y[ind], z[ind], dV[ind], dx_0_arr[ind], ns[i])
+        x_out = np.concatenate((x_out, x_ref))
+        y_out = np.concatenate((y_out, y_ref))
+        z_out = np.concatenate((z_out, z_ref))
+        dV_out = np.concatenate((dV_out, dV_ref))
+        #except:
+        #    print('Error in graded_mesh()! Check refinement.')
+    print("graded mesh has" + str(x_out.size) + " elements")
+    return x_out, y_out, z_out, dV_out
 
 
-def fac_map(f, vg_x, vg_y, vg_z, f_J_sidecar = None, r_io = 5 * 6.371e6, dx_1re = 2e6, mag_mom_vector = np.array([0., 0., -8e22])):
+def refine_mesh(x, y, z, dV, dx_0, n):
+    # x, y, z: initial coordinates (1D numpy float arrays), assumed to be at the center of cubic cell
+    # dx_0: side length of initial mesh (1D numpy array or single scalar value)
+    # n (int): the factor by which to refine the mesh
+    size = x.size
+    xout = np.zeros([size, n**3])
+    yout = np.zeros([size, n**3])
+    zout = np.zeros([size, n**3])
+    dV_out = np.zeros([size, n**3])
+    dx = dx_0 / n
+    iarr = np.arange(n)
+    ind = 0
+    for i_x in range(n):
+        for i_y in range(n):
+            for i_z in range(n):
+                xout[:, ind] = x - (dx_0 / 2) + ( (i_x+0.5) * dx)
+                yout[:, ind] = y - (dx_0 / 2) + ( (i_y+0.5) * dx)
+                zout[:, ind] = z - (dx_0 / 2) + ( (i_z+0.5) * dx)
+                dV_out[:, ind] = dV / n**3
+                ind += 1
+    return xout.flatten(), yout.flatten(), zout.flatten(), dV_out.flatten()
+
+@timer
+def fac_map(f, vg_x, vg_y, vg_z, f_J_sidecar = None, r_IB = 5 * 6.371e6, dx_1re = 2e6, mag_mom_vector = np.array([0., 0., -8e22])):
     '''
      Find the vector current density [A/m^2] at specified x,y,z position [SI]
      Map the FACs along magnetic field lines (J \propto B).
@@ -51,8 +127,8 @@ def fac_map(f, vg_x, vg_y, vg_z, f_J_sidecar = None, r_io = 5 * 6.371e6, dx_1re 
     vg_r, vg_theta, vg_phi = cartesian_to_spherical(vg_x, vg_y, vg_z)
     #ind_r = np.where(vg_r < R_EARTH)[0]
     #dx_1re = dx / 2**np.nanmin(f.get_amr_level(cellids[ind_r]))   # grid resolution dx at radius 1 RE (well inside inner boundary)
-    #outer, = np.where(vg_r >= r_io)
-    inner, = np.where((vg_r < r_io) & (vg_r > (R_EARTH + dx_1re/2)))  # only integrate over cells whose centers are at least 1/2 a cell length beyond radius of 1 R_E
+    #outer, = np.where(vg_r >= r_IB)
+    inner, = np.where((vg_r < r_IB) & (vg_r > (R_EARTH + dx_1re/2)))  # only integrate over cells whose centers are at least 1/2 a cell length beyond radius of 1 R_E
 
 
     vg_J_eval = np.zeros([vg_x.size, 3])
@@ -82,7 +158,7 @@ def fac_map(f, vg_x, vg_y, vg_z, f_J_sidecar = None, r_io = 5 * 6.371e6, dx_1re 
     else: # (use sidecar containing current density "vg_J" in non-ionospheric runs, e.g. EGL)
         # map: initial point -> some point in the simulation domain near the inner boundary (~5 R_E) according to dipole formula
         print('NOTE: Upmapping FACs along constant L-shell via dipole formula!')
-        r_up = r_io
+        r_up = r_IB
         lat_up = np.arccos( np.sqrt(r_up / L) ) # latitude at r=r_up
         theta_up = (np.pi / 2) - lat_up
         x_up, y_up, z_up = spherical_to_cartesian(r_up, theta_up[inner], vg_phi[inner])
@@ -98,13 +174,13 @@ def fac_map(f, vg_x, vg_y, vg_z, f_J_sidecar = None, r_io = 5 * 6.371e6, dx_1re 
         vg_J_eval[inner[ind_fin], :] = b_dir * J_signed_up * scale_factor   # Mapping DOWN from the FACs evaluated in the simulation domain near inner boundary
 
     # don't allow field aligned currents if they can't possibly map to the inner boundary (some sort of numerical error led to non-zero ig_fac at equatorial latitudes)
-    ind_to_zero = np.where(L < r_io) 
+    ind_to_zero, = np.where(L < r_IB) 
     vg_J_eval[ind_to_zero, :] = 0.
     return vg_J_eval
 
 
 @timer
-def biot_savart(coord_list, f, f_J_sidecar = None, r_io = 5 * 6.371e6):
+def biot_savart(coord_list, f, f_J_sidecar = None, r_IB = 5 * 6.371e6):
     '''
     param coord_list:   a list of 3-element arrays of coordinates [ [x1,y1,z1], [x2,y2,z2], ... ], SI units
                         if considering just a single starting point, the code accepts a 3-element array-like object [x1,y1,z1]
@@ -115,8 +191,8 @@ def biot_savart(coord_list, f, f_J_sidecar = None, r_io = 5 * 6.371e6):
     runtime (FHA): overhead of about 200 sec (setup), plus 0.2 sec for each element of coord_list
 
     returns a tuple (B_inner, B_outer) 
-    B_inner: the B-field [T] generated by FACs at 1 R_E < r< r_io
-    B_outer: the B-field [T] generated by currents in simulation domain at r > r_io
+    B_inner: the B-field [T] generated by FACs at 1 R_E < r< r_IB
+    B_outer: the B-field [T] generated by currents in simulation domain at r > r_IB
     '''
 
     # standardize input (a list of 3-element arrays/lists)
@@ -161,62 +237,36 @@ def biot_savart(coord_list, f, f_J_sidecar = None, r_io = 5 * 6.371e6):
     #B = np.zeros([ncoords, 3])
     
     vg_r, vg_theta, vg_phi = cartesian_to_spherical(vg_x, vg_y, vg_z)
-    ind_r = np.where(vg_r < R_EARTH)[0]
+    ind_r = np.argmin(vg_r)
+    #ind_r, = np.where(vg_r < R_EARTH)[0]
     dx_1re = dx / 2**np.nanmin(f.get_amr_level(cellids[ind_r]))   # grid resolution dx at radius 1 RE (well inside inner boundary)
-    outer, = np.where(vg_r >= r_io)
-    inner, = np.where((vg_r < r_io) & (vg_r > (R_EARTH + dx_1re/2)))  # only integrate over cells whose centers are at least 1/2 a cell length beyond radius of 1 R_E
+    outer, = np.where(vg_r >= r_IB)
+    inner, = np.where((vg_r < r_IB) & (vg_r > (R_EARTH + dx_1re/2)))  # only integrate over cells whose centers are at least 1/2 a cell length beyond radius of 1 R_E
 
     vg_J_eval = np.zeros(vg_J.shape) # the currents that will actually be integrated over
     vg_J_eval[outer] = vg_J[outer]
+    
+    n_ref_max = 8 
+    #x_inner_ref, y_inner_ref, z_inner_ref, dV_inner_ref = refine_mesh(vg_x[inner], vg_y[inner], vg_z[inner], dV[inner], dx_1re, n_ref_max)  # 2000km / n_ref mesh
+    x_inner_ref, y_inner_ref, z_inner_ref, dV_inner_ref = graded_mesh(vg_x[inner], vg_y[inner], vg_z[inner], dV[inner], dx_1re,
+                                                                      ns = np.array([n_ref_max, 4, 2]), Rs = np.array([R_EARTH + dx_1re/(2*n_ref_max), R_EARTH*2, R_EARTH*4]))
 
-    vg_J_eval[inner] = fac_map(f, vg_x[inner], vg_y[inner], vg_z[inner], f_J_sidecar = f_J_sidecar, r_io = r_io, dx_1re = dx_1re, mag_mom_vector = np.array([0., 0., -8e22]))
-
-    '''
-    vg_lat = (np.pi / 2) - vg_theta         # -pi/2 < lat < pi/2
-    L = vg_r /  np.cos(vg_lat)**2           # L-shell (dipole) [m]
-
-    # evaluate FACs in 'inner' region (outside of simulation domain)
-    if f_J_sidecar is None:
-        # map: initial point -> downmap to ionosphere via dipole formula (ionospheric runs, e.g. FHA)
-        coords_ionosphere = f.get_ionosphere_node_coords()  # [n_nodes, 3]
-        ig_fac = f.read_variable('ig_fac')      # [n_nodes]
-        vg_b_vol_magnitude = np.sqrt(vg_b_vol[:,0]**2 + vg_b_vol[:,1]**2 + vg_b_vol[:,2]**2 )
-
-        lat0 = np.arccos( np.sqrt(R_EARTH / L) ) # latitude at r=R_EARTH
-        theta0 = (np.pi / 2) - lat0
-        b0 = b_dip_magnitude(theta0, R_EARTH, mag_mom = 8e22)
-        x0, y0, z0 = spherical_to_cartesian(R_EARTH, theta0[inner], vg_phi[inner])
-        for i in range(x0.size):
-            # find the nearest cell and evaluate the current there (brute force)
-            # this approach is probably faster: https://github.com/fmihpc/vlasiator/blob/master/sysboundary/ionosphere.cpp#L381
-            dist = np.sqrt((x0[i] - coords_ionosphere[:,0])**2 + (y0[i] - coords_ionosphere[:,1])**2 + (z0[i] - coords_ionosphere[:,2])**2)
-            ind_min = np.argmin(dist)
-            vg_J_eval[inner[i], :] = (vg_b_vol[inner[i],:] / b0[inner[i]]) * ig_fac[ind_min]  # J \propto B. Mapping UP from the FACs evaluated at the ground 
-    else: # (use sidecar containing current density "vg_J" in non-ionospheric runs, e.g. EGL)
-        # map: initial point -> some point in the simulation domain near the inner boundary (~5 R_E) according to dipole formula
-        print('NOTE: Upmapping FACs along constant L-shell via dipole formula!')
-        r_up = r_io
-        lat_up = np.arccos( np.sqrt(r_up / L) ) # latitude at r=r_up
-        theta_up = (np.pi / 2) - lat_up
-        x_up, y_up, z_up = spherical_to_cartesian(r_up, theta_up[inner], vg_phi[inner])
-        ind_fin, = np.where(np.isfinite(lat_up[inner]))
-        coords_temp = list(np.array([x_up[ind_fin],y_up[ind_fin],z_up[ind_fin]]).T.reshape([ind_fin.size,3]))
-        vg_b_vol_fin = f_J_sidecar.read_interpolated_variable("vg_b_vol", coords_temp)
-        B_up = np.array([np.linalg.norm(vg_b_vol_fin, axis = 1)] * 3).transpose()
-        B_down = np.array([b_dip_magnitude(vg_theta[inner[ind_fin]], vg_r[inner[ind_fin]], mag_mom = 8e22)] * 3).transpose()
-        scale_factor = B_down / B_up                                        # J \propto B
-        vg_J = f_J_sidecar.read_interpolated_variable("vg_J", coords_temp)
-        J_signed_up = np.array([np.sum(vg_J * vg_b_vol_fin, axis = 1) ] * 3).transpose() / B_up    # magnitude and sign of J   (projection J dot B / |B|)
-        b_dir = b_dip_direction(vg_x[inner[ind_fin]], vg_y[inner[ind_fin]], vg_z[inner[ind_fin]])
-        vg_J_eval[inner[ind_fin], :] = b_dir * J_signed_up * scale_factor   # Mapping DOWN from the FACs evaluated in the simulation domain near inner boundary
-    '''
+    vg_J_eval_inner_ref = fac_map(f, x_inner_ref, y_inner_ref, z_inner_ref, f_J_sidecar = f_J_sidecar, r_IB = r_IB, dx_1re = dx_1re/n_ref_max, mag_mom_vector = np.array([0., 0., -8e22]))
+    #vg_J_eval[inner] = fac_map(f, vg_x[inner], vg_y[inner], vg_z[inner], f_J_sidecar = f_J_sidecar, r_IB = r_IB, dx_1re = dx_1re, mag_mom_vector = np.array([0., 0., -8e22]))
 
     # 'outer' magnetopsheric contribution given by Vlasiator currents
     # 'inner' magnetopsheric contribution given by mapped FACs
-
-    B_inner = integrate_biot_savart(coord_list, vg_x[inner], vg_y[inner], vg_z[inner], vg_J_eval[inner], dV[inner])
+    # Should B_ionosphere also be called here?
+    '''
+    # integrate_biot_savart2() found to be a bit faster than integrate_biot_savart() even without the latter's use of numba's @jit decorator.
+    B_inner = integrate_biot_savart2(coord_list, x_inner_ref, y_inner_ref, z_inner_ref, np.transpose(vg_J_eval_inner_ref).copy(order='C'), dV_inner_ref)
+    #B_inner = integrate_biot_savart(coord_list, vg_x[inner], vg_y[inner], vg_z[inner], vg_J_eval[inner], dV[inner])
+    B_outer = integrate_biot_savart2(coord_list, vg_x[outer], vg_y[outer], vg_z[outer], np.transpose(vg_J_eval[outer]).copy(order='C'), dV[outer])
+    '''
+    B_inner = integrate_biot_savart(coord_list, x_inner_ref, y_inner_ref, z_inner_ref, vg_J_eval_inner_ref, dV_inner_ref)
+    #B_inner = integrate_biot_savart(coord_list, vg_x[inner], vg_y[inner], vg_z[inner], vg_J_eval[inner], dV[inner])
     B_outer = integrate_biot_savart(coord_list, vg_x[outer], vg_y[outer], vg_z[outer], vg_J_eval[outer], dV[outer])
-
+    
     return B_inner, B_outer
 
 
@@ -241,30 +291,59 @@ def b_dip(x, y, z, mag_mom_vector = np.array([0., 0., -8e22])):
     return B
 
 
-
+@timer
 @jit(nopython=True)
-def integrate_biot_savart(coord_list, vg_x, vg_y, vg_z, vg_J, delta):
+def integrate_biot_savart(coord_list, x, y, z, J, delta):
     # accelerated with numba
+    # all units SI
     # exact same formula can be used for volume and surface integrals
     # Biot-Savart (volume): B = (mu_0 / 4 * pi) \int { J x r' / |r'|^3 } dV  ([J] = A/m^2, delta == dV)
     #            (surface): B = (mu_0 / 4 * pi) \int { J x r' / |r'|^3 } dA  ([J] = A/m, delta = dS)
     B = np.zeros((len(coord_list), 3))
-    r_p = np.zeros((vg_x.size, 3))
+    r_p = np.zeros((x.size, 3))
 
     for i, coord in enumerate(coord_list):
-        r_p[:,0] = coord[0] - vg_x
-        r_p[:,1] = coord[1] - vg_y
-        r_p[:,2] = coord[2] - vg_z
+        r_p[:,0] = coord[0] - x
+        r_p[:,1] = coord[1] - y
+        r_p[:,2] = coord[2] - z
 
-        r_p_mag = np.sqrt(r_p[:,0]**2 + r_p[:,1]**2 + r_p[:,2]**2)
-        J_cross_r_p = np.cross(vg_J, r_p)
+        r_p_mag = np.sqrt(r_p[:,0]**2 + r_p[:,1]**2 + r_p[:,2]**2)   # np.linalg.norm(axis=1) doesn't work with numba's jit
+        J_cross_r_p = np.cross(J, r_p)
 
-        B[i,0] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[:,0] / r_p_mag**3 )
-        B[i,1] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[:,1] / r_p_mag**3 )
-        B[i,2] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[:,2] / r_p_mag**3 )
+        B[i,0] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[:,0] / (r_p_mag*r_p_mag*r_p_mag) )
+        B[i,1] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[:,1] / (r_p_mag*r_p_mag*r_p_mag) )
+        B[i,2] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[:,2] / (r_p_mag*r_p_mag*r_p_mag) )
 
     return B
 
+
+'''
+@timer
+#@jit(nopython=True)   # doesn't work, np.cross() requires input arrays have shape[-1] == 3
+def integrate_biot_savart2(coord_list, x, y, z, J_T, delta):
+    # make use of Python's row-major order, cache hits. Faster than integrate_biot_savart
+    #   --> requires:  J_T.shape == [3, n]
+    # all units SI
+    # exact same formula can be used for volume and surface integrals
+    # Biot-Savart (volume): B = (mu_0 / 4 * pi) \int { J x r' / |r'|^3 } dV  ([J] = A/m^2, delta == dV)
+    #            (surface): B = (mu_0 / 4 * pi) \int { J x r' / |r'|^3 } dA  ([J] = A/m, delta = dS)
+    B = np.zeros((len(coord_list), 3))
+    r_p = np.zeros((3, x.size))
+
+    for i, coord in enumerate(coord_list):
+        r_p[0,:] = coord[0] - x
+        r_p[1,:] = coord[1] - y
+        r_p[2,:] = coord[2] - z
+
+        r_p_mag = np.linalg.norm(r_p, axis = 0)
+        J_cross_r_p = np.cross(J_T, r_p, axis = 0)
+
+        B[i,0] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[0,:] / (r_p_mag*r_p_mag*r_p_mag) )  # supposedly, x*x*x faster than x**3
+        B[i,1] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[1,:] / (r_p_mag*r_p_mag*r_p_mag) )
+        B[i,2] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[2,:] / (r_p_mag*r_p_mag*r_p_mag) )
+
+    return B
+'''
 
 
 #def ionosphere_node_xyz(filename = '/wrk-vakka/group/spacephysics/vlasiator/temp/ionogrid_FHA.vlsv'):
@@ -290,7 +369,7 @@ def get_ig_r(f):
 
 
 
-def calc_Dst(f, f_J_sidecar = None, r_io = 5 * 6.371e6):
+def calc_Dst(f, f_J_sidecar = None, r_IB = 5 * 6.371e6):
     '''
     Follow Welling et al. (2020) approach for calculating Dst. Integrate Biot-Savart over:
     1. All currents within the Vlasov domain
@@ -300,8 +379,9 @@ def calc_Dst(f, f_J_sidecar = None, r_io = 5 * 6.371e6):
     4. Ionospheric Pedersen currents
     '''
     coord_list = [np.array([R_EARTH, 0, 0]), np.array([0,R_EARTH,0]), np.array([-R_EARTH,0,0]), np.array([0,-R_EARTH,0])]  # 4 virtual magnetometers around the equator used to calculate Dst
-    B_inner, B_outer = biot_savart(coord_list, f, f_J_sidecar = f_J_sidecar, r_io = r_io)    
-    B = B_inner + B_outer
+    B_inner, B_outer = biot_savart(coord_list, f, f_J_sidecar = f_J_sidecar, r_IB = r_IB)    
+    #B_iono = B_ionosphere(f, ig_r = None, method = "integrate")    # doesn't work here, need to interpolate to coord_list
+    B = B_inner + B_outer     # want: B = B_inner + B_outer + B_iono
     Dst = np.average(B[:,2])   # for more general formula (non-equatorial), need to include cos(theta) factor
     return Dst
 
@@ -324,32 +404,32 @@ def B_ionosphere(f, ig_r = None, method = 'integrate'):
     # which locally looks like infinite plane to a ground observer looking up
     # B = (mu_0 / 2) * r_hat x J_s , where J_s vector is current per unit length
     # method = 'integrate' (default) or 'local'
-    R_iono = R_EARTH + 1e5   # Ionosphere mesh at altitude 100 km, see Urs's ionosphere writeup
-    if ig_r is None:
-        ig_r = get_ig_r(f)
     try:
+        R_iono = R_EARTH + 1e5   # Ionosphere mesh at altitude 100 km, see Urs's ionosphere writeup
+        if ig_r is None:
+            ig_r = get_ig_r(f)
         ig_r_hat = ig_r / R_iono   # approximate (technically |ig_r| not exactly R_EARTH)
         ig_inplanecurrent = f.read_variable('ig_inplanecurrent')  # height-integrated, element centered. Units [A/m]
+        #B_ionosphere = np.zeros(ig_r.shape)
+        if method == "local":
+            # approximate horizontal current as an infinite sheet of current directly overhead
+            B_iono = (mu_0 / 2) * np.cross(ig_r_hat, ig_inplanecurrent)
+        elif method == 'integrate':
+            # integrate Biot-Savart law over ionospheric mesh. More accurate but slower.
+            surface_r = ig_r * R_EARTH / R_iono       # same as ionosphere mesh, but at radius R_EARTH
+            dS = ionosphere_mesh_area(f)
+            B_iono =  integrate_biot_savart(list(surface_r), ig_r[:, 0], ig_r[:, 1], ig_r[:, 2], ig_inplanecurrent, dS)
+        return B_iono
     except:
         return None   # no ionospheric inplanecurrent data
-        #B_ionosphere = np.zeros(ig_r.shape)
-    if method == "local":
-        # approximate horizontal current as an infinite sheet of current directly overhead
-        B_iono = (mu_0 / 2) * np.cross(ig_r_hat, ig_inplanecurrent)
-    elif method == 'integrate':
-        # integrate Biot-Savart law over ionospheric mesh. More accurate but slower.
-        surface_r = ig_r * R_EARTH / R_iono       # same as ionosphere mesh, but at radius R_EARTH
-        dS = ionosphere_mesh_area(f)
-        B_iono =  integrate_biot_savart(coord_list, ig_r[:, 0], ig_r[:, 1], ig_r[:, 2], ig_inplanecurrent, dS)
-    return B_iono
 
 
 
-def B_magnetosphere(f, f_J_sidecar = None, r_io = 5 * 6.371e6, ig_r = None):
+def B_magnetosphere(f, f_J_sidecar = None, r_IB = 5 * 6.371e6, ig_r = None):
     # wrapper for biot_savart()
     if ig_r is None:
         ig_r = get_ig_r(f)
-    B_inner, B_outer = biot_savart( list(ig_r), f, f_J_sidecar = f_J_sidecar, r_io = r_io )
+    B_inner, B_outer = biot_savart( list(ig_r), f, f_J_sidecar = f_J_sidecar, r_IB = r_IB )
     return B_inner, B_outer
 
 
@@ -379,11 +459,11 @@ def save_B_vlsv(input_tuple):
     # calculate magnetic fields
     ig_r = get_ig_r(f_iono)                     # f_iono contains the ionospheric mesh (the locations where B is evaluated)
     B_iono = B_ionosphere(f, ig_r = ig_r, method = "integrate")
-    try:   # UNTESTED (as of 28.7.2023 the .vslv sidecar and visit plots assumed r_io=5 RE for EGL, FHA, FIA. need to rerun with this try/except block )
-        r_io = float(f.get_config()['ionosphere']['downmapRadius'][0]) * R_EARTH
+    try:   # UNTESTED (as of 28.7.2023 the .vslv sidecar and visit plots assumed r_IB=5 RE for EGL, FHA, FIA. need to rerun with this try/except block )
+        r_IB = float(f.get_config()['ionosphere']['downmapRadius'][0]) * R_EARTH
     except: #EGL
-        r_io = 5 * 6.371e6
-    B_inner, B_outer = B_magnetosphere(f, f_J_sidecar = f_J_sidecar, r_io = r_io, ig_r = ig_r)
+        r_IB = 5 * 6.371e6
+    B_inner, B_outer = B_magnetosphere(f, f_J_sidecar = f_J_sidecar, r_IB = r_IB, ig_r = ig_r)
     # write to file
     filename_vlsv = save_dir + 'ionosphere_B_sidecar_{}.{}.vlsv'.format(run, str(fileIndex).zfill(7))
     mkdir_path(filename_vlsv)
@@ -409,7 +489,7 @@ def plot_Dst(run, start, stop, step):
                 f_J_sidecar = None
             filename = get_vlsvfile_fullpath(run, fileIndex)
             f = pt.vlsvfile.VlsvReader(filename)
-            Dst = calc_Dst(f, f_J_sidecar = f_J_sidecar, r_io = 5 * 6.371e6)
+            Dst = calc_Dst(f, f_J_sidecar = f_J_sidecar, r_IB = 5 * 6.371e6)
             Dsts[i] = Dst
         except:   # IndexError?
             print("Tried index {}, Dsts array size {}".format(i, Dsts.size))
