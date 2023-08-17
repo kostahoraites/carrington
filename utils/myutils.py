@@ -232,7 +232,8 @@ def timer(my_func, *args, **kwargs):
             t1 = time()
             output = my_func(*args, **kwargs)
             diff = time() - t1
-            print("{}(args={},kwargs={}) ran in {} seconds".format(my_func.__name__,args,kwargs, diff) )
+            #print("{}(args={},kwargs={}) ran in {} seconds".format(my_func.__name__,args,kwargs, diff) )
+            print("{}() ran in {} seconds".format(my_func.__name__, diff) )
             return output
     return wrapTheFunction
 

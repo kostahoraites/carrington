@@ -1,7 +1,7 @@
 #!/bin/bash -l
 ###carrington:
 
-#SBATCH -J bs-EGL-recalc
+#SBATCH -J bs-FHA-recalc-jit
 #SBATCH --output=slurm-%x.%j.out
 #SBATCH -t 23:00:00
 #SBATCH -M carrington
@@ -55,7 +55,7 @@ export OMP_NUM_THREADS=$t
 #module load Python/3.7.2-GCCcore-8.2.0
 
 NPROC=64
-RUN=EGL
+RUN=FHA
 
 module list
 time srun python utils/biot_savart.py -nproc $NPROC -task $SLURM_ARRAY_TASK_ID -run $RUN
