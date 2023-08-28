@@ -491,7 +491,7 @@ def save_B_vlsv(input_tuple):
     # write to file
     filename_vlsv = save_dir + 'ionosphere_B_sidecar_{}.{}.vlsv'.format(run, str(fileIndex).zfill(7))
     mkdir_path(filename_vlsv)
-    writer = pt.vlsvfile.VlsvWriter(f_iono, filename_vlsv)
+    writer = pt.vlsvfile.VlsvWriter(f_iono, filename_vlsv, copy_meshes=("ionosphere"))
     writer.write(ig_r,'ig_r','VARIABLE','ionosphere')
     writer.write(B_iono,'ig_B_ionosphere','VARIABLE','ionosphere')
     writer.write(B_inner,'ig_B_inner','VARIABLE','ionosphere')
