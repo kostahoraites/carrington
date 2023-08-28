@@ -14,7 +14,7 @@
 XDG_RUNTIME_DIR=""
 node=$(hostname -s)
 user=$(whoami)
-cluster="turso01"
+cluster="turso02"
 port=50002 #<SET A PORT HERE, PREFERABLY BETWEEN 50002 AND 60000>
 
 # print tunneling instructions jupyter-log

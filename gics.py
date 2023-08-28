@@ -47,8 +47,9 @@ if __name__ == '__main__':
     from myutils import cartesian_to_spherical_vector, spherical_to_cartesian, mkdir_path, timer
     
     R_EARTH = 6371000.
-    
-    run = "EGL"  # FHA
+    print("test1")
+
+    run = "FHA"  # FHA
     if run == "FIA":
         dir = "/wrk-vakka/group/spacephysics/vlasiator/3D/FIA/bulk_sidecars/ig_B"
     elif run == "FHA":
@@ -97,7 +98,9 @@ if __name__ == '__main__':
         ig_B_inner_arr[:,:,i-nmin] = ig_B_inner
         ig_B_outer = f.read_variable('ig_B_outer')
         ig_B_outer_arr[:,:,i-nmin] = ig_B_outer
-    
+
+
+    print("test2")
     # interpolate across zeros in B arrays (missing data points, something funny about FHA and FIA makes ionosphere write operation unreliable?)
     #for arr in [ig_B_arr, ig_B_ionosphere_arr, ig_B_inner_arr, ig_B_outer_arr]:
     

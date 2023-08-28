@@ -232,7 +232,7 @@ def biot_savart(coord_list, f, f_J_sidecar = None, r_IB = 5 * 6.371e6, mesh = 'g
     vg_r, vg_theta, vg_phi = cartesian_to_spherical(vg_x, vg_y, vg_z)
     ind_r = np.argmin(vg_r)
     #ind_r, = np.where(vg_r < R_EARTH)[0]
-    #dx_1re = dx / 2**np.nanmin(f.get_amr_level(cellids[ind_r]))   # grid resolution dx at radius 1 RE (well inside inner boundary)
+    dx_1re = dx / 2**np.nanmin(f.get_amr_level(cellids[ind_r]))   # grid resolution dx at radius 1 RE (well inside inner boundary)
     outer, = np.where(vg_r >= r_IB)
 
     vg_J_eval = np.zeros(vg_J.shape) # the currents that will actually be integrated over
@@ -241,13 +241,14 @@ def biot_savart(coord_list, f, f_J_sidecar = None, r_IB = 5 * 6.371e6, mesh = 'g
     if mesh == 'graded':
         ns = np.array([16, 8, 4, 2])
         Rs = np.array([R_EARTH, R_EARTH*1.3,  R_EARTH*2, R_EARTH*3.2])    # assume B~r^-3 (dipole), use resolution required to resolve FAC structures mapped to at 5 RE
-        inner, = np.where((vg_r < r_IB) & (vg_r > R_EARTH))
+        inner, = np.where((vg_r < r_IB) & (vg_r > (R_EARTH - dx_1re/2)))
         x_inner_ref, y_inner_ref, z_inner_ref, dV_inner_ref = graded_mesh(vg_x[inner], vg_y[inner], vg_z[inner], dV[inner], ns = ns, Rs = Rs)
+        #return f, x_inner_ref, y_inner_ref, z_inner_ref, dV_inner_ref  # TEST
         vg_J_eval_inner_ref = fac_map(f, x_inner_ref, y_inner_ref, z_inner_ref, dV_inner_ref**(1. / 3), f_J_sidecar = f_J_sidecar, r_IB = r_IB,  mag_mom_vector = np.array([0., 0., -8e22]))
     elif mesh == 'refined':
         n_fine = 8
-        inner, = np.where((vg_r < r_IB) & (vg_r > R_EARTH))
-        x_inner_ref, y_inner_ref, z_inner_ref, dV_inner_ref = refine_mesh(vg_x[inner], vg_y[inner], vg_z[inner], dV[inner], n_fine)  # 2000km / n_ref mesh
+        inner, = np.where((vg_r < r_IB) & (vg_r > (R_EARTH - dx_1re/2)))
+        x_inner_ref, y_inner_ref, z_inner_ref, dV_inner_ref = refine_mesh(vg_x[inner], vg_y[inner], vg_z[inner], dV[inner], n_fine)  # 2000km / n_fine mesh
         vg_J_eval_inner_ref = fac_map(f, x_inner_ref, y_inner_ref, z_inner_ref, dV_inner_ref**(1. / 3), f_J_sidecar = f_J_sidecar, r_IB = r_IB, mag_mom_vector = np.array([0., 0., -8e22]))
     else:  # no refinement
         inner, = np.where((vg_r < r_IB) & (vg_r > R_EARTH))
@@ -257,15 +258,15 @@ def biot_savart(coord_list, f, f_J_sidecar = None, r_IB = 5 * 6.371e6, mesh = 'g
     # 'inner' magnetopsheric contribution given by mapped FACs
     # B_ionosphere is called externally to get ionospheric contribution from in-plane currents
 
-    B_outer = integrate_biot_savart(coord_list, vg_x[outer], vg_y[outer], vg_z[outer], vg_J_eval[outer], dV[outer])
-    #B_outer = integrate_biot_savart2(coord_list, vg_x[outer], vg_y[outer], vg_z[outer], np.transpose(vg_J_eval[outer]).copy(order='C'), dV[outer])  # alternative, no @jit decorator
+    #B_outer = integrate_biot_savart(coord_list, vg_x[outer], vg_y[outer], vg_z[outer], vg_J_eval[outer], dV[outer])
+    B_outer = integrate_biot_savart2(coord_list, vg_x[outer], vg_y[outer], vg_z[outer], np.transpose(vg_J_eval[outer]).copy(order='C'), dV[outer])  # alternative, no @jit decorator
 
     if mesh == 'graded' or mesh == 'refined':
-        B_inner = integrate_biot_savart(coord_list, x_inner_ref, y_inner_ref, z_inner_ref, vg_J_eval_inner_ref, dV_inner_ref)
-        #B_inner = integrate_biot_savart2(coord_list, x_inner_ref, y_inner_ref, z_inner_ref, np.transpose(vg_J_eval_inner_ref).copy(order='C'), dV_inner_ref)
+        #B_inner = integrate_biot_savart(coord_list, x_inner_ref, y_inner_ref, z_inner_ref, vg_J_eval_inner_ref, dV_inner_ref)
+        B_inner = integrate_biot_savart2(coord_list, x_inner_ref, y_inner_ref, z_inner_ref, np.transpose(vg_J_eval_inner_ref).copy(order='C'), dV_inner_ref)
     else: # no refinement
-        B_inner = integrate_biot_savart(coord_list, vg_x[inner], vg_y[inner], vg_z[inner], vg_J_eval[inner], dV[inner])
-        #B_inner = integrate_biot_savart2(coord_list, vg_x[inner], vg_y[inner], vg_z[inner], np.transpose(vg_J_eval[inner]).copy(order='C'), dV[inner])
+        #B_inner = integrate_biot_savart(coord_list, vg_x[inner], vg_y[inner], vg_z[inner], vg_J_eval[inner], dV[inner])
+        B_inner = integrate_biot_savart2(coord_list, vg_x[inner], vg_y[inner], vg_z[inner], np.transpose(vg_J_eval[inner]).copy(order='C'), dV[inner])
     
     return B_inner, B_outer
 
@@ -292,11 +293,11 @@ def b_dip(x, y, z, mag_mom_vector = np.array([0., 0., -8e22])):
 
 
 @timer
-@jit(nopython=True)
+@jit(nopython=True, fastmath=False)
 def integrate_biot_savart(coord_list, x, y, z, J, delta):
     # accelerated with numba
     # all units SI
-    # exact same formula can be used for volume and surface integrals
+    # this function can be used for both volume and surface integrals
     # Biot-Savart (volume): B = (mu_0 / 4 * pi) \int { J x r' / |r'|^3 } dV  ([J] = A/m^2, delta == dV)
     #            (surface): B = (mu_0 / 4 * pi) \int { J x r' / |r'|^3 } dA  ([J] = A/m, delta = dS)
     B = np.zeros((len(coord_list), 3))
@@ -310,16 +311,17 @@ def integrate_biot_savart(coord_list, x, y, z, J, delta):
         r_p_mag = np.sqrt(r_p[:,0]**2 + r_p[:,1]**2 + r_p[:,2]**2)   # np.linalg.norm(axis=1) doesn't work with numba's jit
         J_cross_r_p = np.cross(J, r_p)
 
-        B[i,0] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[:,0] / (r_p_mag*r_p_mag*r_p_mag) )
-        B[i,1] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[:,1] / (r_p_mag*r_p_mag*r_p_mag) )
-        B[i,2] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[:,2] / (r_p_mag*r_p_mag*r_p_mag) )
+        repeated_terms = (mu_0 / (4 * np.pi)) * delta / (r_p_mag*r_p_mag*r_p_mag) 
+        B[i,0] += np.nansum( repeated_terms * J_cross_r_p[:,0] )
+        B[i,1] += np.nansum( repeated_terms * J_cross_r_p[:,1] )
+        B[i,2] += np.nansum( repeated_terms * J_cross_r_p[:,2] )
 
     return B
 
 
 
 @timer
-#@jit(nopython=True)   # doesn't work, np.cross() requires input arrays have shape[-1] == 3
+@jit(nopython=True, fastmath=True)   # doesn't work, np.cross() requires input arrays have shape[-1] == 3
 def integrate_biot_savart2(coord_list, x, y, z, J_T, delta):
     # make use of Python's row-major order, cache hits. Faster than integrate_biot_savart
     #   --> requires:  J_T.shape == [3, n]
@@ -330,17 +332,25 @@ def integrate_biot_savart2(coord_list, x, y, z, J_T, delta):
     B = np.zeros((len(coord_list), 3))
     r_p = np.zeros((3, x.size))
 
+    J_cross_r_p = np.zeros((3, x.size))
     for i, coord in enumerate(coord_list):
         r_p[0,:] = coord[0] - x
         r_p[1,:] = coord[1] - y
         r_p[2,:] = coord[2] - z
 
+        '''
         r_p_mag = np.linalg.norm(r_p, axis = 0)
-        J_cross_r_p = np.cross(J_T, r_p, axis = 0)
+        J_cross_r_p = np.cross(J_T, r_p, axis = 0)   # can't use jit
+        '''
+        r_p_mag = np.sqrt(r_p[0,:]**2 + r_p[1,:]**2 + r_p[2,:]**2)
+        J_cross_r_p[0,:] = J_T[1,:] * r_p[2,:] - J_T[1,:] * r_p[2,:]   # allows jit
+        J_cross_r_p[1,:] = J_T[2,:] * r_p[0,:] - J_T[0,:] * r_p[2,:]
+        J_cross_r_p[2,:] = J_T[0,:] * r_p[1,:] - J_T[1,:] * r_p[0,:]
 
-        B[i,0] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[0,:] / (r_p_mag*r_p_mag*r_p_mag) )  # supposedly, x*x*x faster than x**3
-        B[i,1] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[1,:] / (r_p_mag*r_p_mag*r_p_mag) )
-        B[i,2] += np.nansum( (mu_0 / (4 * np.pi)) * delta * J_cross_r_p[2,:] / (r_p_mag*r_p_mag*r_p_mag) )
+        repeated_terms = (mu_0 / (4 * np.pi)) * delta / (r_p_mag*r_p_mag*r_p_mag)    # supposedly, x*x*x faster than x**3
+        B[i,0] += np.nansum( repeated_terms * J_cross_r_p[0,:] )  
+        B[i,1] += np.nansum( repeated_terms * J_cross_r_p[1,:] )
+        B[i,2] += np.nansum( repeated_terms * J_cross_r_p[2,:] )
 
     return B
 
@@ -380,9 +390,13 @@ def calc_Dst(f, f_J_sidecar = None, r_IB = 5 * 6.371e6):
     4. Ionospheric Pedersen currents
     '''
     coord_list = [np.array([R_EARTH, 0, 0]), np.array([0,R_EARTH,0]), np.array([-R_EARTH,0,0]), np.array([0,-R_EARTH,0])]  # 4 virtual magnetometers around the equator used to calculate Dst
+    #return biot_savart(coord_list, f, f_J_sidecar = f_J_sidecar, r_IB = r_IB, mesh = 'graded')      # TEST
     B_inner, B_outer = biot_savart(coord_list, f, f_J_sidecar = f_J_sidecar, r_IB = r_IB, mesh = 'graded')    
     B_iono = B_ionosphere(f, coord_list = coord_list, ig_r = None, method = "integrate")
-    B = B_inner + B_outer + B_iono     # want: B = B_inner + B_outer
+    if B_iono is None:
+        B = B_inner + B_outer     # want: B = B_inner + B_outer
+    else:
+        B = B_inner + B_outer + B_iono     # want: B = B_inner + B_outer
     Dst = np.average(B[:,2])   # for more general formula (non-equatorial), need to include cos(theta) factor
     return Dst
 
@@ -424,9 +438,11 @@ def B_ionosphere(f, coord_list = None, ig_r = None, method = 'integrate'):
             surface_r = ig_r * R_EARTH / R_iono       # same as ionosphere mesh, but at radius R_EARTH
             dS = ionosphere_mesh_area(f)
             if coord_list is None:
-                B_iono =  integrate_biot_savart(list(surface_r), ig_r[:, 0], ig_r[:, 1], ig_r[:, 2], ig_inplanecurrent, dS)
+                #B_iono =  integrate_biot_savart(list(surface_r), ig_r[:, 0], ig_r[:, 1], ig_r[:, 2], ig_inplanecurrent, dS)
+                B_iono = integrate_biot_savart2(list(surface_r), ig_r[:, 0], ig_r[:, 1], ig_r[:, 2], np.transpose(ig_inplanecurrent).copy(order='C'), dS)
             else:
-                B_iono =  integrate_biot_savart(coord_list, ig_r[:, 0], ig_r[:, 1], ig_r[:, 2], ig_inplanecurrent, dS)
+                #B_iono =  integrate_biot_savart(coord_list, ig_r[:, 0], ig_r[:, 1], ig_r[:, 2], ig_inplanecurrent, dS)
+                B_iono = integrate_biot_savart2(coord_list, ig_r[:, 0], ig_r[:, 1], ig_r[:, 2], np.transpose(ig_inplanecurrent).copy(order='C'), dS)
         return B_iono
     except:
         return None   # no ionospheric inplanecurrent data
