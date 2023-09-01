@@ -1,7 +1,7 @@
 #!/bin/bash -l
 ###carrington:
 
-#SBATCH -J bs-FHA-recalc-jit
+#SBATCH -J bs1-EGL
 #SBATCH --output=slurm-%x.%j.out
 #SBATCH -t 23:00:00
 #SBATCH -M carrington
@@ -10,10 +10,10 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=64       # cpu-cores per task (>1 if multi-threaded tasks)
 #SBATCH --mem=160G # memory per node
-#SBATCH --array=7-18%6
+#SBATCH --array=0-17%2
      # X-Y%Z means "run with $SLURM_ARRAY_TASK_ID from X to Y, on at most Z nodes at a time"
      # run EGL: 0-17
-     # run FHA: 0-18
+     # run FHA: 0-18, 7-18 for t>=1000
      # run FIA: 0-13
      ### ^ task number indexed by $SLURM_ARRAY_TASK_ID ^
 
@@ -55,7 +55,7 @@ export OMP_NUM_THREADS=$t
 #module load Python/3.7.2-GCCcore-8.2.0
 
 NPROC=64
-RUN=FHA
+RUN=EGL
 
 module list
 time srun python utils/biot_savart.py -nproc $NPROC -task $SLURM_ARRAY_TASK_ID -run $RUN

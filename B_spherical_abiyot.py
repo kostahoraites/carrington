@@ -31,7 +31,7 @@ def cartesian_to_spherical_vector(vx, vy, vz, x, y, z):
     return v_r, v_theta, v_phi
 
 
-f = pt.vlsvfile.VlsvReader("/wrk-vakka/group/spacephysics/vlasiator/3D/FHA/bulk1_sidecars/ig_B/ionosphere_B_sidecar_FHA.0001001.vlsv")
+f = pt.vlsvfile.VlsvReader("/users/horakons/FHA/bulk_sidecars/ig_B/ionosphere_B_sidecar_FHA.0001010.vlsv")  # on Puhti
 
 ig_r = f.read_variable('ig_r')
 ig_B_ionosphere = f.read_variable('ig_B_ionosphere')
