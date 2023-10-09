@@ -1,2 +1,224 @@
-slurmstepd: error: *** JOB 203694730 ON carrington-808 CANCELLED AT 2023-08-22T12:03:03 ***
-slurmstepd: error: *** JOB 203694730 STEPD TERMINATED ON carrington-808 AT 2023-08-22T12:04:33 DUE TO JOB NOT ENDING WITH SIGNALS ***
+[W 13:11:49.628 NotebookApp] Loading JupyterLab as a classic notebook (v6) extension.
+[C 13:11:50.521 NotebookApp] You must use Jupyter Server v1 to load JupyterLab as notebook extension. You have v2.5.0 installed.
+    You can fix this by executing:
+        pip install -U "jupyter-server<2.0.0"
+[I 13:11:50.528 NotebookApp] Serving notebooks from local directory: /wrk-vakka/users/horakons/carrington
+[I 13:11:50.528 NotebookApp] Jupyter Notebook 6.5.4 is running at:
+[I 13:11:50.528 NotebookApp] http://carrington-801:50002/?token=e077d87298666466319ccf12975c2c82843bed59dc9e581e
+[I 13:11:50.528 NotebookApp]  or http://127.0.0.1:50002/?token=e077d87298666466319ccf12975c2c82843bed59dc9e581e
+[I 13:11:50.528 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[C 13:11:50.536 NotebookApp] 
+    
+    To access the notebook, open this file in a browser:
+        file:///home/horakons/.local/share/jupyter/runtime/nbserver-3343605-open.html
+    Or copy and paste one of these URLs:
+        http://carrington-801:50002/?token=e077d87298666466319ccf12975c2c82843bed59dc9e581e
+     or http://127.0.0.1:50002/?token=e077d87298666466319ccf12975c2c82843bed59dc9e581e
+[W 13:14:43.092 NotebookApp] 404 GET /hub/api (128.214.9.213) 216.770000ms referer=None
+[I 13:14:43.134 NotebookApp] 302 GET /tree? (128.214.9.213) 0.310000ms
+[W 13:14:55.289 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.170000ms referer=None
+[I 13:14:55.328 NotebookApp] 302 GET /tree? (128.214.9.213) 0.430000ms
+[W 13:14:57.242 NotebookApp] 404 GET /hub/api (128.214.9.213) 0.880000ms referer=None
+[I 13:14:57.285 NotebookApp] 302 GET /tree? (128.214.9.213) 0.250000ms
+[W 13:14:57.428 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.010000ms referer=None
+[I 13:14:57.471 NotebookApp] 302 GET /tree? (128.214.9.213) 0.250000ms
+[W 13:15:11.669 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.100000ms referer=None
+[I 13:15:11.709 NotebookApp] 302 GET /tree? (128.214.9.213) 0.450000ms
+[W 13:15:15.520 NotebookApp] 404 GET /hub/api (128.214.9.213) 0.690000ms referer=None
+[I 13:15:15.533 NotebookApp] 302 GET /tree? (128.214.9.213) 0.240000ms
+[W 13:15:15.642 NotebookApp] 404 GET /hub/api (128.214.9.213) 0.720000ms referer=None
+[I 13:15:15.675 NotebookApp] 302 GET /tree? (128.214.9.213) 0.460000ms
+[W 13:19:35.743 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.140000ms referer=None
+[I 13:19:35.801 NotebookApp] 302 GET /tree? (128.214.9.213) 0.270000ms
+[I 13:19:36.020 NotebookApp] Kernel started: 6b767529-3924-42c2-91e6-303a29bb4c28, name: myconda
+[W 13:19:46.273 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.170000ms referer=None
+[W 13:19:46.276 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.610000ms referer=None
+[W 13:19:46.276 NotebookApp] 404 GET /hub/api (128.214.9.213) 2.070000ms referer=None
+[W 13:19:46.277 NotebookApp] 404 GET /hub/api (128.214.9.213) 2.640000ms referer=None
+[W 13:19:46.278 NotebookApp] 404 GET /hub/api (128.214.9.213) 3.250000ms referer=None
+[W 13:19:46.279 NotebookApp] 404 GET /hub/api (128.214.9.213) 3.910000ms referer=None
+[W 13:19:46.282 NotebookApp] 404 GET /hub/api (128.214.9.213) 0.870000ms referer=None
+[I 13:19:46.289 NotebookApp] 302 GET /tree? (128.214.9.213) 0.390000ms
+[I 13:19:46.291 NotebookApp] 302 GET /tree? (128.214.9.213) 1.170000ms
+[I 13:19:46.291 NotebookApp] 302 GET /tree? (128.214.9.213) 1.260000ms
+[I 13:19:46.291 NotebookApp] 302 GET /tree? (128.214.9.213) 1.340000ms
+[I 13:19:46.292 NotebookApp] 302 GET /tree? (128.214.9.213) 1.450000ms
+[I 13:19:46.292 NotebookApp] 302 GET /tree? (128.214.9.213) 1.570000ms
+[I 13:19:46.292 NotebookApp] 302 GET /tree? (128.214.9.213) 1.710000ms
+[W 13:19:46.307 NotebookApp] Forbidden
+[W 13:19:46.308 NotebookApp] 403 GET /api/kernelspecs?1695982786290 (128.214.9.213) 1.190000ms referer=None
+[W 13:19:46.308 NotebookApp] Forbidden
+[W 13:19:46.308 NotebookApp] 403 GET /api/kernels?1695982786290 (128.214.9.213) 1.530000ms referer=None
+[W 13:19:46.308 NotebookApp] Forbidden
+[W 13:19:46.309 NotebookApp] 403 GET /api/kernels?1695982786291 (128.214.9.213) 1.890000ms referer=None
+[W 13:19:46.319 NotebookApp] Forbidden
+[W 13:19:46.320 NotebookApp] 403 GET /api/sessions?1695982786292 (128.214.9.213) 3.190000ms referer=None
+[W 13:19:46.322 NotebookApp] Forbidden
+[W 13:19:46.322 NotebookApp] 403 GET /api/kernels?1695982786298 (128.214.9.213) 4.280000ms referer=None
+[W 13:19:46.323 NotebookApp] Forbidden
+[W 13:19:46.323 NotebookApp] 403 GET /api/kernelspecs?1695982786299 (128.214.9.213) 4.590000ms referer=None
+[W 13:19:46.323 NotebookApp] Forbidden
+[W 13:19:46.323 NotebookApp] 403 GET /api/kernels?1695982786300 (128.214.9.213) 4.880000ms referer=None
+[W 13:19:46.324 NotebookApp] Forbidden
+[W 13:19:46.324 NotebookApp] 403 GET /api/kernelspecs?1695982786301 (128.214.9.213) 5.160000ms referer=None
+[W 13:19:46.324 NotebookApp] Forbidden
+[W 13:19:46.324 NotebookApp] 403 GET /api/kernels?1695982786302 (128.214.9.213) 5.460000ms referer=None
+[W 13:19:46.325 NotebookApp] Forbidden
+[W 13:19:46.325 NotebookApp] 403 GET /api/kernelspecs?1695982786297 (128.214.9.213) 5.780000ms referer=None
+[W 13:19:46.329 NotebookApp] Forbidden
+[W 13:19:46.330 NotebookApp] 403 GET /api/kernelspecs?1695982786303 (128.214.9.213) 3.680000ms referer=None
+[W 13:19:46.331 NotebookApp] Forbidden
+[W 13:19:46.331 NotebookApp] 403 GET /api/kernels?1695982786307 (128.214.9.213) 4.760000ms referer=None
+[W 13:19:46.331 NotebookApp] Forbidden
+[W 13:19:46.332 NotebookApp] 403 GET /api/sessions?1695982786308 (128.214.9.213) 5.120000ms referer=None
+[W 13:19:46.332 NotebookApp] Forbidden
+[W 13:19:46.332 NotebookApp] 403 GET /api/sessions?1695982786309 (128.214.9.213) 5.500000ms referer=None
+[W 13:19:46.333 NotebookApp] Forbidden
+[W 13:19:46.333 NotebookApp] 403 GET /api/kernels?1695982786304 (128.214.9.213) 5.880000ms referer=None
+[W 13:19:46.333 NotebookApp] Forbidden
+[W 13:19:46.334 NotebookApp] 403 GET /api/kernels?1695982786310 (128.214.9.213) 6.200000ms referer=None
+[W 13:19:46.334 NotebookApp] Forbidden
+[W 13:19:46.334 NotebookApp] 403 GET /api/kernels?1695982786309 (128.214.9.213) 6.520000ms referer=None
+[W 13:19:46.334 NotebookApp] Forbidden
+[W 13:19:46.335 NotebookApp] 403 GET /api/sessions?1695982786310 (128.214.9.213) 6.820000ms referer=None
+[W 13:19:46.335 NotebookApp] Forbidden
+[W 13:19:46.335 NotebookApp] 403 GET /api/kernels?1695982786311 (128.214.9.213) 7.110000ms referer=None
+[W 13:19:46.335 NotebookApp] Forbidden
+[W 13:19:46.336 NotebookApp] 403 GET /api/sessions?1695982786311 (128.214.9.213) 7.420000ms referer=None
+[W 13:19:46.347 NotebookApp] Forbidden
+[W 13:19:46.347 NotebookApp] 403 GET /api/kernelspecs?1695982786334 (128.214.9.213) 0.920000ms referer=None
+[W 13:19:46.347 NotebookApp] Forbidden
+[W 13:19:46.348 NotebookApp] 403 GET /api/kernelspecs?1695982786341 (128.214.9.213) 1.190000ms referer=None
+[W 13:19:46.348 NotebookApp] Forbidden
+[W 13:19:46.348 NotebookApp] 403 GET /api/kernelspecs?1695982786342 (128.214.9.213) 1.480000ms referer=None
+[W 13:20:15.283 NotebookApp] 404 GET /hub/api (128.214.9.213) 0.830000ms referer=None
+[I 13:20:15.326 NotebookApp] 302 GET /tree? (128.214.9.213) 0.260000ms
+[W 13:20:17.142 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.200000ms referer=None
+[I 13:20:17.149 NotebookApp] 302 GET /tree? (128.214.9.213) 0.240000ms
+[W 13:20:17.226 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.090000ms referer=None
+[I 13:20:17.228 NotebookApp] 302 GET /tree? (128.214.9.213) 0.240000ms
+[I 13:20:31.400 NotebookApp] Starting buffering for 6b767529-3924-42c2-91e6-303a29bb4c28:fe4e3779-b974-4392-908f-f0435a91aa7c
+[W 13:20:33.411 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.090000ms referer=None
+[W 13:20:33.412 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.530000ms referer=None
+[W 13:20:33.412 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.950000ms referer=None
+[W 13:20:33.413 NotebookApp] 404 GET /hub/api (128.214.9.213) 2.390000ms referer=None
+[W 13:20:33.414 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.140000ms referer=None
+[W 13:20:33.415 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.580000ms referer=None
+[W 13:20:33.415 NotebookApp] 404 GET /hub/api (128.214.9.213) 2.010000ms referer=None
+[W 13:20:33.416 NotebookApp] 404 GET /hub/api (128.214.9.213) 2.440000ms referer=None
+[I 13:20:33.438 NotebookApp] 302 GET /tree? (128.214.9.213) 0.440000ms
+[I 13:20:33.438 NotebookApp] 302 GET /tree? (128.214.9.213) 0.530000ms
+[I 13:20:33.439 NotebookApp] 302 GET /tree? (128.214.9.213) 0.560000ms
+[I 13:20:33.439 NotebookApp] 302 GET /tree? (128.214.9.213) 0.640000ms
+[I 13:20:33.439 NotebookApp] 302 GET /tree? (128.214.9.213) 0.720000ms
+[I 13:20:33.440 NotebookApp] 302 GET /tree? (128.214.9.213) 0.600000ms
+[I 13:20:33.440 NotebookApp] 302 GET /tree? (128.214.9.213) 0.710000ms
+[I 13:20:33.441 NotebookApp] 302 GET /tree? (128.214.9.213) 0.800000ms
+[W 13:20:33.468 NotebookApp] Forbidden
+[W 13:20:33.468 NotebookApp] 403 GET /api/kernelspecs?1695982833439 (128.214.9.213) 0.890000ms referer=None
+[W 13:20:33.469 NotebookApp] Forbidden
+[W 13:20:33.469 NotebookApp] 403 GET /api/kernels?1695982833440 (128.214.9.213) 1.110000ms referer=None
+[W 13:20:33.469 NotebookApp] Forbidden
+[W 13:20:33.469 NotebookApp] 403 GET /api/kernels?1695982833441 (128.214.9.213) 1.330000ms referer=None
+[W 13:20:33.469 NotebookApp] Forbidden
+[W 13:20:33.470 NotebookApp] 403 GET /api/sessions?1695982833442 (128.214.9.213) 1.560000ms referer=None
+[W 13:20:33.471 NotebookApp] Forbidden
+[W 13:20:33.471 NotebookApp] 403 GET /api/kernelspecs?1695982833443 (128.214.9.213) 1.140000ms referer=None
+[W 13:20:33.472 NotebookApp] Forbidden
+[W 13:20:33.472 NotebookApp] 403 GET /api/kernels?1695982833444 (128.214.9.213) 1.350000ms referer=None
+[W 13:20:33.476 NotebookApp] Forbidden
+[W 13:20:33.477 NotebookApp] 403 GET /api/kernelspecs?1695982833451 (128.214.9.213) 2.630000ms referer=None
+[W 13:20:33.478 NotebookApp] Forbidden
+[W 13:20:33.478 NotebookApp] 403 GET /api/kernels?1695982833453 (128.214.9.213) 1.210000ms referer=None
+[W 13:20:33.478 NotebookApp] Forbidden
+[W 13:20:33.478 NotebookApp] 403 GET /api/kernelspecs?1695982833455 (128.214.9.213) 1.430000ms referer=None
+[W 13:20:33.478 NotebookApp] Forbidden
+[W 13:20:33.479 NotebookApp] 403 GET /api/kernels?1695982833455 (128.214.9.213) 1.640000ms referer=None
+[W 13:20:33.479 NotebookApp] Forbidden
+[W 13:20:33.479 NotebookApp] 403 GET /api/kernelspecs?1695982833457 (128.214.9.213) 1.860000ms referer=None
+[W 13:20:33.479 NotebookApp] Forbidden
+[W 13:20:33.479 NotebookApp] 403 GET /api/kernels?1695982833457 (128.214.9.213) 2.070000ms referer=None
+[W 13:20:33.482 NotebookApp] Forbidden
+[W 13:20:33.482 NotebookApp] 403 GET /api/sessions?1695982833460 (128.214.9.213) 2.870000ms referer=None
+[W 13:20:33.483 NotebookApp] Forbidden
+[W 13:20:33.483 NotebookApp] 403 GET /api/kernels?1695982833458 (128.214.9.213) 3.090000ms referer=None
+[W 13:20:33.484 NotebookApp] Forbidden
+[W 13:20:33.485 NotebookApp] 403 GET /api/kernels?1695982833464 (128.214.9.213) 3.410000ms referer=None
+[W 13:20:33.485 NotebookApp] Forbidden
+[W 13:20:33.485 NotebookApp] 403 GET /api/kernels?1695982833466 (128.214.9.213) 3.620000ms referer=None
+[W 13:20:33.485 NotebookApp] Forbidden
+[W 13:20:33.485 NotebookApp] 403 GET /api/sessions?1695982833466 (128.214.9.213) 3.830000ms referer=None
+[W 13:20:33.485 NotebookApp] Forbidden
+[W 13:20:33.486 NotebookApp] 403 GET /api/sessions?1695982833467 (128.214.9.213) 4.050000ms referer=None
+[W 13:20:33.486 NotebookApp] Forbidden
+[W 13:20:33.486 NotebookApp] 403 GET /api/kernels?1695982833467 (128.214.9.213) 4.270000ms referer=None
+[W 13:20:33.486 NotebookApp] Forbidden
+[W 13:20:33.486 NotebookApp] 403 GET /api/sessions?1695982833468 (128.214.9.213) 4.490000ms referer=None
+[W 13:20:33.489 NotebookApp] Forbidden
+[W 13:20:33.489 NotebookApp] 403 GET /api/kernelspecs?1695982833471 (128.214.9.213) 0.380000ms referer=None
+[W 13:20:33.490 NotebookApp] Forbidden
+[W 13:20:33.490 NotebookApp] 403 GET /api/kernelspecs?1695982833474 (128.214.9.213) 1.040000ms referer=None
+[W 13:20:33.493 NotebookApp] Forbidden
+[W 13:20:33.493 NotebookApp] 403 GET /api/kernelspecs?1695982833483 (128.214.9.213) 0.430000ms referer=None
+[W 13:20:33.503 NotebookApp] Forbidden
+[W 13:20:33.503 NotebookApp] 403 GET /api/kernelspecs?1695982833489 (128.214.9.213) 0.370000ms referer=None
+[W 13:20:35.657 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.210000ms referer=None
+[I 13:20:35.695 NotebookApp] 302 GET /tree? (128.214.9.213) 0.250000ms
+[W 13:20:36.091 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.760000ms referer=None
+[W 13:20:36.092 NotebookApp] 404 GET /hub/api (128.214.9.213) 0.920000ms referer=None
+[W 13:20:36.094 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.530000ms referer=None
+[W 13:20:36.095 NotebookApp] 404 GET /hub/api (128.214.9.213) 2.160000ms referer=None
+[W 13:20:36.099 NotebookApp] 404 GET /hub/api (128.214.9.213) 5.720000ms referer=None
+[W 13:20:36.100 NotebookApp] 404 GET /hub/api (128.214.9.213) 6.510000ms referer=None
+[W 13:20:36.101 NotebookApp] 404 GET /hub/api (128.214.9.213) 0.930000ms referer=None
+[W 13:20:36.102 NotebookApp] 404 GET /hub/api (128.214.9.213) 1.380000ms referer=None
+[I 13:20:36.104 NotebookApp] 302 GET /tree? (128.214.9.213) 0.670000ms
+[I 13:20:36.104 NotebookApp] 302 GET /tree? (128.214.9.213) 0.750000ms
+[I 13:20:36.104 NotebookApp] 302 GET /tree? (128.214.9.213) 0.850000ms
+[I 13:20:36.105 NotebookApp] 302 GET /tree? (128.214.9.213) 0.290000ms
+[I 13:20:36.124 NotebookApp] 302 GET /tree? (128.214.9.213) 0.880000ms
+[I 13:20:36.125 NotebookApp] 302 GET /tree? (128.214.9.213) 1.140000ms
+[I 13:20:36.125 NotebookApp] 302 GET /tree? (128.214.9.213) 1.250000ms
+[I 13:20:36.125 NotebookApp] 302 GET /tree? (128.214.9.213) 1.360000ms
+[W 13:20:36.140 NotebookApp] Forbidden
+[W 13:20:36.141 NotebookApp] 403 GET /api/kernelspecs?1695982836111 (128.214.9.213) 3.590000ms referer=None
+[W 13:20:36.141 NotebookApp] Forbidden
+[W 13:20:36.141 NotebookApp] 403 GET /api/kernelspecs?1695982836113 (128.214.9.213) 3.770000ms referer=None
+[W 13:20:36.141 NotebookApp] Forbidden
+[W 13:20:36.142 NotebookApp] 403 GET /api/kernels?1695982836112 (128.214.9.213) 4.050000ms referer=None
+[W 13:20:36.142 NotebookApp] Forbidden
+[W 13:20:36.142 NotebookApp] 403 GET /api/sessions?1695982836121 (128.214.9.213) 4.310000ms referer=None
+[W 13:20:36.142 NotebookApp] Forbidden
+[W 13:20:36.143 NotebookApp] 403 GET /api/kernels?1695982836123 (128.214.9.213) 4.580000ms referer=None
+[W 13:20:36.143 NotebookApp] Forbidden
+[W 13:20:36.143 NotebookApp] 403 GET /api/kernels?1695982836121 (128.214.9.213) 4.840000ms referer=None
+[W 13:20:36.143 NotebookApp] Forbidden
+[W 13:20:36.143 NotebookApp] 403 GET /api/kernels?1695982836114 (128.214.9.213) 5.100000ms referer=None
+[W 13:20:36.144 NotebookApp] Forbidden
+[W 13:20:36.144 NotebookApp] 403 GET /api/kernelspecs?1695982836116 (128.214.9.213) 5.260000ms referer=None
+[W 13:20:36.144 NotebookApp] Forbidden
+[W 13:20:36.144 NotebookApp] 403 GET /api/kernels?1695982836116 (128.214.9.213) 5.370000ms referer=None
+[W 13:20:36.144 NotebookApp] Forbidden
+[W 13:20:36.145 NotebookApp] 403 GET /api/kernelspecs?1695982836118 (128.214.9.213) 5.390000ms referer=None
+[W 13:20:36.145 NotebookApp] Forbidden
+[W 13:20:36.145 NotebookApp] 403 GET /api/kernels?1695982836119 (128.214.9.213) 5.560000ms referer=None
+[W 13:20:36.145 NotebookApp] Forbidden
+[W 13:20:36.146 NotebookApp] 403 GET /api/kernels?1695982836120 (128.214.9.213) 5.930000ms referer=None
+[W 13:20:36.146 NotebookApp] Forbidden
+[W 13:20:36.146 NotebookApp] 403 GET /api/sessions?1695982836122 (128.214.9.213) 6.220000ms referer=None
+[W 13:20:36.148 NotebookApp] Forbidden
+[W 13:20:36.149 NotebookApp] 403 GET /api/sessions?1695982836124 (128.214.9.213) 1.420000ms referer=None
+[W 13:20:36.149 NotebookApp] Forbidden
+[W 13:20:36.149 NotebookApp] 403 GET /api/kernels?1695982836125 (128.214.9.213) 1.640000ms referer=None
+[W 13:20:36.149 NotebookApp] Forbidden
+[W 13:20:36.150 NotebookApp] 403 GET /api/sessions?1695982836126 (128.214.9.213) 1.910000ms referer=None
+[W 13:20:36.150 NotebookApp] Forbidden
+[W 13:20:36.150 NotebookApp] 403 GET /api/kernelspecs?1695982836128 (128.214.9.213) 2.520000ms referer=None
+[W 13:20:36.151 NotebookApp] Forbidden
+[W 13:20:36.151 NotebookApp] 403 GET /api/kernels?1695982836129 (128.214.9.213) 2.880000ms referer=None
+[W 13:20:36.151 NotebookApp] Forbidden
+[W 13:20:36.151 NotebookApp] 403 GET /api/kernels?1695982836131 (128.214.9.213) 3.150000ms referer=None
+[W 13:20:36.159 NotebookApp] Forbidden
+[W 13:20:36.159 NotebookApp] 403 GET /api/sessions?1695982836131 (128.214.9.213) 0.830000ms referer=None
+[I 19:51:34.147 NotebookApp] Starting buffering for 6b767529-3924-42c2-91e6-303a29bb4c28:be13eb47-df35-44c0-9f84-6c886d8cdf7e
+slurmstepd: error: *** JOB 203695620 ON carrington-801 CANCELLED AT 2023-09-30T01:16:34 DUE TO TIME LIMIT ***

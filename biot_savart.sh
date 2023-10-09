@@ -1,7 +1,7 @@
 #!/bin/bash -l
 ###carrington:
 
-#SBATCH -J bs1-EGL
+#SBATCH -J Dst-EGL
 #SBATCH --output=slurm-%x.%j.out
 #SBATCH -t 23:00:00
 #SBATCH -M carrington
@@ -10,7 +10,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=64       # cpu-cores per task (>1 if multi-threaded tasks)
 #SBATCH --mem=160G # memory per node
-#SBATCH --array=0-17%2
+#SBATCH --array=0-0%1
      # X-Y%Z means "run with $SLURM_ARRAY_TASK_ID from X to Y, on at most Z nodes at a time"
      # run EGL: 0-17
      # run FHA: 0-18, 7-18 for t>=1000

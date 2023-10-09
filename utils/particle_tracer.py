@@ -235,17 +235,17 @@ if __name__ == '__main__':
     run = 'EGI'
     fileIndex = 1506
     filename = get_vlsvfile_fullpath( run, fileIndex)
-    vlsvReader = ft.f()
+    vlsvReader = ft.f(filename)
     interpolators = interpolators_fg(vlsvReader)
     # "initial" conditions for (back-)tracing
     x0 = R_EARTH * np.array([11.0,0,0])
-    v0 = np.array([0,0,0])
     particle = 'electron'
     nt = 80000
     #nt = 600
     dt = 5e-4           # estimate: omega_p ~ 1 Hz, omega_e ~ 1 kHz in solar wind
     time_sign = -1
     # trace particle trajectories
+    #v0 = np.array([0,0,0])
     #x, v, t = trace_particle(f, x0, v0, interpolators = interpolators, particle = particle, time_sign = time_sign, nt = nt, dt = dt)
     if particle == 'electron': 
         vmin = -1e7

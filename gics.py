@@ -49,7 +49,7 @@ if __name__ == '__main__':
     R_EARTH = 6371000.
     print("test1")
 
-    run = "FHA"  # FHA
+    run = "FIA"  # EGL, FHA, FIA
     if run == "FIA":
         dir = "/wrk-vakka/group/spacephysics/vlasiator/3D/FIA/bulk_sidecars/ig_B"
     elif run == "FHA":
