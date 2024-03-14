@@ -17,6 +17,8 @@ import scipy
 from scipy.optimize import curve_fit
 import pandas
 from time import time
+import PIL
+import matplotlib.patches as patches
 #import magnetopause3dk          # don't want to do this at the top of the file because it kind of breaks vorna
 #from magnetopause3dk import make_streamlines, get_magnetopause
 
@@ -491,7 +493,7 @@ def fit_bow_shock(f, run = '', root_dir = '', fileIndex = '', threshold = 2, del
     return f_shue_fit, theta_bs, r_bs
 
 
-def fit_magnetopause(f, run = '', root_dir = '', fileIndex = '', threshold = 1, delta = 0.05, plot = True):
+def fit_magnetopause(f, run = '', root_dir = '', fileIndex = '', threshold = 1, delta = 0.05, plot = True, plot_shue = True, scatter = True, streamline_color = None, plot_GEO = False, streamline_density = 2, streamlinethick = 0.8, plotvar = 'proton/vg_beta_star'):
     #vg_x, vg_y, vg_z = bow_shock(f, threshold = threshold, delta = delta)
     #vg_rcyl = (vg_y**2 + vg_z**2)**0.5
     vg_x, vg_rcyl = magnetopause(f, threshold = threshold, delta = delta)
@@ -553,14 +555,18 @@ def fit_magnetopause(f, run = '', root_dir = '', fileIndex = '', threshold = 1, 
         
         m_x = r*np.cos(theta)
         m_R = r*np.sin(theta)
-        ax.plot(m_x, m_R, color='cyan', linewidth=2.5, zorder=1)
+        if plot_shue:
+            ax.plot(m_x, m_R, color='cyan', linewidth=2.5, zorder=1)
 
         #beta_star colormap:
         streamlines = 'proton/vg_v'
-        sl_color = 'orange'
-        sl_density = 2
+        if streamline_color is None:
+            sl_color = 'orange'
+        else:
+            sl_color = streamline_color
+        sl_density = streamline_density  # 2 default
         normal = 'z' #y=0 or z=0 plane
-        scale = 1.5
+        scale = 1.75   # font size
        
             #curve fit: 
         model = np.poly1d(np.polyfit(vg_rcyl, vg_x, 2))
@@ -571,22 +577,50 @@ def fit_magnetopause(f, run = '', root_dir = '', fileIndex = '', threshold = 1, 
         mp_nose_y = polyline[mp_nose_index]
 
         if plot:
+            if plotvar == 'vg_beta_star':
+                vmin = vmin=10**(-1)*0.5
+                vmax = 10*0.5
+            elif plotvar == 'vg_pe_egp':
+                v0 = 4.8322707299999997e-11
+                vmax = v0 * 10.
+                vmin = v0 / 10.
+            elif plotvar == 'vg_j_jwc_egp':
+                v0 = 1
+                vmax = 10.
+                vmin = 0.1
+            else:
+                vmin = None
+                vmax = None
             #pt.plot.plot_colormap3dslice(filename=bulkLocation+bulkname1,var='proton/vg_beta_star', boxre=[-15, 15, -15, 15], normal =normal, run=run,
-            pt.plot.plot_colormap3dslice(filename=bulkname,var='proton/vg_beta_star', boxre=[-15, 15, -15, 15], normal =normal, run=run,
-                                         colormap='seismic',vmin=10**(-1)*0.5,vmax=10*0.5,step=j,outputdir=outputLocation,
+            pt.plot.plot_colormap3dslice(filename=bulkname,var=plotvar, boxre=[-11, 11, -11, 11], normal =normal, run=run,
+                                         colormap='seismic',vmin=vmin,vmax=vmax,step=j,outputdir=outputLocation,
                                          outputfile='beta_star_colormap_xy_{}_{}.pdf'.format(run, str(j).zfill(5)), 
-                                         Earth=1, streamlines=streamlines, streamlinedensity=sl_density, streamlinecolor = sl_color, cutpointre=0, axes = ax, scale=scale, useimshow=True)
-       
-            mp_col = 'lime'  # magenta
-            ax.plot(model(polyline), polyline, color=mp_col, linewidth=2.5, zorder=3)
+                                         Earth=1, streamlines=streamlines, streamlinedensity=sl_density, streamlinethick = streamlinethick, streamlinecolor = sl_color, cutpointre=0, axes = ax, scale=scale, useimshow=True)
+
+            
+            r_GEO = 6.6
+            x_GEO = r_GEO*np.cos(theta)
+            y_GEO = r_GEO*np.sin(theta)
+
+            mp_col = 'yellow'  # magenta
+            ax.plot(model(polyline), polyline, color=mp_col, linewidth=2.5, zorder=2)
 
             #beta_star circles:
-            ax.scatter(vg_x, vg_rcyl, color='w', zorder=2) #plot in xy-plane
+            if scatter:
+                ax.scatter(vg_x, vg_rcyl, color='w', zorder=3) #plot in xy-plane
         
-            ax.plot(mp_nose_x, mp_nose_y, marker='o', mfc=mp_col, mec=mp_col, zorder=4)
-        
+            ax.plot(mp_nose_x, mp_nose_y, marker='o', mfc=mp_col, mec=mp_col, zorder=6)
+
+            if plot_GEO:
+                box = [[6, 9], [-2.5, 2.5], [-8, 8]]
+                ax.plot(x_GEO, y_GEO, color='magenta', linewidth=3.5, zorder=5, linestyle = '--')
+                ax.text(-4, -8.5, r'GEO', color = 'magenta', fontsize = 26, weight='bold')
+                rect = mpl.patches.Rectangle((box[0][0], box[1][0]), box[0][1]-box[0][0], box[1][1]-box[1][0], linewidth=3.5, edgecolor='orange', facecolor='none', linestyle = '--', zorder = 5)
+                ax.text(box[0][0]-2.2, box[1][0]-2.3, r'eGMC', color = 'orange', fontsize = 26, weight='bold')
+                ax.add_patch(rect)
+
             #----------------------------------------------------------------------------
-            filename = '{}beta_star_colormap_xy_{}.pdf'.format(save_dir, str(fileIndex).zfill(5))
+            filename = '{}{}_colormap_xy_{}_{}.pdf'.format(save_dir, plotvar, run, str(fileIndex).zfill(5))
             plt.savefig(filename)
             plt.close()
 
@@ -595,14 +629,18 @@ def fit_magnetopause(f, run = '', root_dir = '', fileIndex = '', threshold = 1, 
 
             normal = 'y'
             streamlines = 'vg_b_vol'
-            sl_color = 'yellow'
-            ax.plot(m_x, m_R, color='cyan', linewidth=2.5, zorder=1)
+            if streamline_color is None:
+                sl_color = 'yellow'
+            else:
+                sl_color = streamline_color
+            if plot_shue:
+                ax.plot(m_x, m_R, color='cyan', linewidth=2.5, zorder=1)
 
             #pt.plot.plot_colormap3dslice(filename=bulkLocation+bulkname1,var='proton/vg_beta_star', boxre=[-15, 15, -15, 15], normal =normal, run=run,
-            pt.plot.plot_colormap3dslice(filename=bulkname,var='proton/vg_beta_star', boxre=[-15, 15, -15, 15], normal =normal, run=run,
-                                         colormap='seismic',vmin=10**(-1)*0.5,vmax=10*0.5,step=j,outputdir=outputLocation,
+            pt.plot.plot_colormap3dslice(filename=bulkname,var=plotvar, boxre=[-11, 11, -11, 11], normal =normal, run=run,
+                                         colormap='seismic',vmin=vmin,vmax=vmax,step=j,outputdir=outputLocation,
                                          outputfile='beta_star_colormap_xz_{}_{}.pdf'.format(run, str(j).zfill(5)), 
-                                         Earth=1, streamlines=streamlines, streamlinedensity=sl_density, streamlinecolor = sl_color, cutpointre=0, axes = ax, scale=scale, useimshow=True)
+                                         Earth=1, streamlines=streamlines, streamlinedensity=sl_density, streamlinethick=streamlinethick, streamlinecolor = sl_color, cutpointre=0, axes = ax, scale=scale, useimshow=True)
             #beta_star circles:
             #ax.scatter(vg_x, vg_rcyl, color='w', zorder=2) #plot in xy-plane
 
@@ -616,9 +654,16 @@ def fit_magnetopause(f, run = '', root_dir = '', fileIndex = '', threshold = 1, 
 
         if plot:
             ax.plot(model(polyline), polyline, color=mp_col, linewidth=2.5, zorder=3)
-            ax.plot(mp_nose_x, mp_nose_y, marker='o', mfc=mp_col, mec=mp_col, zorder=4)
+            ax.plot(mp_nose_x, mp_nose_y, marker='o', mfc=mp_col, mec=mp_col, zorder=6, markersize=0.3*mpl.rcParams['lines.markersize'] ** 2)
+            if plot_GEO:
+                ax.plot(x_GEO, y_GEO, color='magenta', linewidth=3.5, zorder=4, linestyle = '--')
+                ax.text(-5, -8.5, r'GEO', color = 'magenta', fontsize = 26, weight='bold')
+                rect = mpl.patches.Rectangle((box[0][0], box[2][0]), box[0][1]-box[0][0], box[2][1]-box[2][0], linewidth=3.5, edgecolor='orange', facecolor='none', linestyle = '--', zorder = 5)
+                ax.text(box[0][0]-2.2, box[2][0]-2.3, r'eGMC', color = 'orange', fontsize = 26, weight='bold')
+                ax.add_patch(rect)
+
             #----------------------------------------------------------------------------
-            filename = '{}beta_star_colormap_xz_{}_{}.pdf'.format(save_dir, run, str(fileIndex).zfill(5))
+            filename = '{}{}_colormap_xz_{}_{}.pdf'.format(save_dir, plotvar, run, str(fileIndex).zfill(5))
             plt.savefig(filename)
             plt.close()
 

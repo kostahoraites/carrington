@@ -49,7 +49,7 @@ if __name__ == '__main__':
     R_EARTH = 6371000.
     print("test1")
 
-    run = "FIA"  # EGL, FHA, FIA
+    run = "FHA"  # EGL, FHA, FIA
     if run == "FIA":
         dir = "/wrk-vakka/group/spacephysics/vlasiator/3D/FIA/bulk_sidecars/ig_B"
     elif run == "FHA":
@@ -62,8 +62,10 @@ if __name__ == '__main__':
     #plt.show()
     
     if run == "FHA":
-        nmin = 1001    # 1001
-        nmax = 1612    # 1100
+        nmin = 501    # 501-1000 using _v2 sidecars
+        nmax = 1000    
+        #nmin = 1001  # 1001-1612 using original sidecars
+        #nmax = 1612
     elif run == "FIA":
         nmin = 1
         nmax = 817         #865 (files 818-819 missing)
@@ -88,7 +90,8 @@ if __name__ == '__main__':
     #populate B arrays
     for i in range(nmin, nmax+1):
         #print(i)
-        f = ft.f(dir + "/ionosphere_B_sidecar_{}.{}.vlsv".format(run, str(i).zfill(7)))     # FHA: file indices 501 - 1612
+        #f = ft.f(dir + "/ionosphere_B_sidecar_{}.{}.vlsv".format(run, str(i).zfill(7)))     # FHA: file indices 1001 - 1612
+        f = ft.f(dir + "/ionosphere_B_sidecar_{}.{}_v2.vlsv".format(run, str(i).zfill(7)))     # FHA: file indices 501 - 1000 (missing horizontal currents in original sidecars is reconstructed in v2)
         try:
             ig_B_ionosphere = f.read_variable('ig_B_ionosphere')
             ig_B_ionosphere_arr[:,:,i-nmin] = ig_B_ionosphere

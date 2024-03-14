@@ -25,6 +25,17 @@ global filename
 global vlsvReader
 global interpolators
 
+
+def print_initial_coords(filename):
+    # for generating input from using particle_tracer.py output .pickle files
+    a = restore(filename)
+    for i in range(8):
+        for j in range(8):
+            text = str(a['x_i'][i, j, :]).strip('[').strip(']').strip(',') +' ' + str(a['v_i'][i, j, :]).strip('[').strip(']').strip(',')
+            print(' '.join(text.split()))
+
+
+
 def interpolators_fg(f):
     '''
     make E and B interpolators
@@ -202,6 +213,8 @@ def liouville(x, run, fileIndex, save_data = False, particle = 'electron', time_
     with Pool(int(ARGS.nproc)) as p:
         data = p.map(liouville_1pt, xv_list)
     f = np.zeros(vpar.shape)
+    x_i = np.zeros([vpar.shape[0], vpar.shape[1], 3])
+    v_i = np.zeros([vpar.shape[0], vpar.shape[1], 3])
     x_f = np.zeros([vpar.shape[0], vpar.shape[1], 3])
     v_f = np.zeros([vpar.shape[0], vpar.shape[1], 3])
     x_trace = [[] for _ in range(nv)]     # DON'T use [[]] * nv (each list will have the same address)
@@ -211,20 +224,22 @@ def liouville(x, run, fileIndex, save_data = False, particle = 'electron', time_
         for j in range(nv):
             ind = i*nv + j
             f[i, j] = data[ind][0]
+            x_i[i, j, :] = xv_list[ind][0]
+            v_i[i, j, :] = xv_list[ind][1]
             x_f[i, j,:] = data[ind][1]
             v_f[i, j,:] = data[ind][2]
             x_trace[i].append(data[ind][3])
             v_trace[i].append(data[ind][4])
             t[i].append(data[ind][5])
     if save_data:
-        save('/wrk-vakka/users/horakons/carrington/data/particle_tracer/f_liouville_test_{}_{}_{}_nt_{}_x{:.1f}_y{:.1f}_z{:.1f}.pickle'.format(run, fileIndex, particle, nt, x[0]/R_EARTH, x[1]/R_EARTH, x[2]/R_EARTH), run = run, fileIndex = fileIndex, f = f, vpar = vpar, vperp = vperp, x_f = x_f, v_f = v_f, x = x_trace, v=v_trace, t=t, filename = filename)
-    return f, vpar, vperp, x_f, v_f, x_trace, v_trace, t
+        save('/wrk-vakka/users/horakons/carrington/data/particle_tracer/f_liouville_test_{}_{}_{}_nt_{}_x{:.1f}_y{:.1f}_z{:.1f}.pickle'.format(run, fileIndex, particle, nt, x[0]/R_EARTH, x[1]/R_EARTH, x[2]/R_EARTH), run = run, fileIndex = fileIndex, f = f, vpar = vpar, vperp = vperp, x_i = x_i, v_i = v_i, x_f = x_f, v_f = v_f, x = x_trace, v=v_trace, t=t, filename = filename)
+    return f, vpar, vperp, x_i, v_i, x_f, v_f, x_trace, v_trace, t
 
 
 #implement:
 # save other variables: full x(t), v(t) for all vpar, vper pairs (keyword flag?)
 # mach_f, T_f, vsw_f, n_f   to see if final point is in the solar wind
-# dynamically decide how many iterations to run? Either at th outset, some kind of while loop, or try/except
+# dynamically decide how many iterations to run? Either at the outset, some kind of while loop, or try/except
 # some way to break the distribution into multiple 8x8 blocks
 # positrons?
 
@@ -233,14 +248,14 @@ if __name__ == '__main__':
     #run = 'EGL'
     #fileIndex = 1760
     run = 'EGI'
-    fileIndex = 1506
+    fileIndex = 1199  # 1506
     filename = get_vlsvfile_fullpath( run, fileIndex)
     vlsvReader = ft.f(filename)
     interpolators = interpolators_fg(vlsvReader)
     # "initial" conditions for (back-)tracing
-    x0 = R_EARTH * np.array([11.0,0,0])
+    x0 = R_EARTH * np.array([11.5,0,0])
     particle = 'electron'
-    nt = 80000
+    nt = 20000
     #nt = 600
     dt = 5e-4           # estimate: omega_p ~ 1 Hz, omega_e ~ 1 kHz in solar wind
     time_sign = -1
@@ -254,7 +269,7 @@ if __name__ == '__main__':
         vmin = -1e5
         vmax = 1e5
     nv = 8
-    f, vpar, vperp, x_f, v_f, x, v, t = liouville(x0, run, fileIndex, save_data = True, particle = particle, time_sign = time_sign, nt = nt, dt = dt, vmin = vmin, vmax = vmax, nv = nv )
+    f, vpar, vperp, x_i, v_i, x_f, v_f, x, v, t = liouville(x0, run, fileIndex, save_data = True, particle = particle, time_sign = time_sign, nt = nt, dt = dt, vmin = vmin, vmax = vmax, nv = nv )
     print(vpar)
     print(vperp)
     print(f)

@@ -5,10 +5,13 @@ from time import time
 import hashlib
 import re
 
+global mu_0
+mu_0 = 4e-7 * np.pi
+
 try:
     from pyspedas.utilities.time_string import *
 except:
-    from pyspedas.utilities.time_string import *
+    from pyspedas import time_string, time_double
     
 
 '''
@@ -42,7 +45,8 @@ def get_bulklocation(run):
     elif run.upper() == 'EGO':
         location = "/wrk-vakka/group/spacephysics/vlasiator/3D/EGO/"
     elif run.upper() == 'EGP':
-        location = "/wrk-vakka/group/spacephysics/vlasiator/3D/EGP/bulk1/"
+        location = "/wrk-vakka/users/horakons/vlasiator_data_files/"
+        #location = "/wrk-vakka/group/spacephysics/vlasiator/3D/EGP/bulk1/"
         #location = "/wrk-vakka/group/spacephysics/vlasiator/3D/{}/bulk5/".format(run.upper())
     elif run.upper() == 'EGILIKE':
         location = "/wrk-vakka/group/spacephysics/vlasiator/temp/EGI_like/"
@@ -71,7 +75,8 @@ def get_filename(run, fileIndex):
     elif run.upper() == 'EGO':
         filename = "bulk1.{}.vlsv".format(str(fileIndex).zfill(7) )
     elif run.upper() == 'EGP':
-        filename = "bulk1.{}.vlsv".format(str(fileIndex).zfill(7) )
+        filename = "bulk1.egp.{}.vlsv".format(str(fileIndex).zfill(7) )
+        #filename = "bulk1.{}.vlsv".format(str(fileIndex).zfill(7) )
         #filename = "bulk5.{}.vlsv".format(str(fileIndex).zfill(7) )
     elif run.upper() == 'EGILIKE':   # test run
         filename = "bulk.{}.vlsv_fg".format(str(fileIndex).zfill(7) )
@@ -86,11 +91,40 @@ def get_filename(run, fileIndex):
     return filename
 
 
+def timeseries(run, var_list, start, stop, filestem = None):     #, step?
+    '''
+        run: name of the Vlasiator run. ex.  'EGL', 'FHA'
+        var_list: a list of variable names (strings)
+            specify operators using 'variable.operator'
+        start: first timestep
+        stop: last timestep
+        filestem: set this keyword to the filename, omitting the end 'XXXXXXX.vlsv'
+    '''
+    import pytools as pt
+    if type(var_list) == str:
+        var_list = [var_list]
+    dct = {}
+    for var in var_list:
+        var_timeseries = []
+        for fileIndex in range(start, stop+1):
+            if filestem is None:
+                filename = get_vlsvfile_fullpath(run, fileIndex)
+            else:
+                filename = filestem + str(fileIndex).zfill(7) + '.vlsv'
+            f = pt.vlsvfile.VlsvReader(filename)
+            if '.' in var:
+                l = var.split('.')
+                vartemp = l[0]; operator = l[1]
+                var_timeseries.append(f.read_variable(vartemp, operator = operator))
+            else:
+                var_timeseries.append(f.read_variable(var))
+        var_timeseries = np.array(var_timeseries)
+        dct[var] = var_timeseries
+    return dct
+
 
 def get_vlsvfile_fullpath(run, fileIndex):
     return get_bulklocation(run) + get_filename(run, fileIndex)
-
-
 
 
 def tell(plt):

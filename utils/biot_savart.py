@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from numba import jit
 # import numba
 from memory_profiler import profile      # @profile decorator
+import ig_tools
 
 global R_EARTH
 R_EARTH = 6.371e6            #check what value is used in simulations
@@ -213,6 +214,7 @@ def biot_savart(coord_list, f, f_J_sidecar = None, r_IB = 5 * 6.371e6, mesh = 'g
 
     if f_J_sidecar is None:
         # calculate directly from B-field Jacobian (ionospheric runs, e.g. FHA)
+        '''
         vg_J = np.zeros([ncells,3])
         vg_dperbxvoldy = f.read_variable('vg_dperbxvoldy')
         vg_dperbyvoldx = f.read_variable('vg_dperbyvoldx')
@@ -223,6 +225,8 @@ def biot_savart(coord_list, f, f_J_sidecar = None, r_IB = 5 * 6.371e6, mesh = 'g
         vg_J[:,0] = (1 / mu_0) * (vg_dperbzvoldy - vg_dperbyvoldz)
         vg_J[:,1] = (1 / mu_0) * (vg_dperbxvoldz - vg_dperbzvoldx)
         vg_J[:,2] = (1 / mu_0) * (vg_dperbyvoldx - vg_dperbxvoldy)
+        '''
+        vg_J = f.read_variable('vg_J')
         # FILL IN: if above doesn't work, calculate J from fg_b and resample to vg grid
     else:
         vg_J = f_J_sidecar.read_variable('vg_J')
@@ -381,7 +385,7 @@ def get_ig_r(f):
     # Calculate barycenters of ionospheric elements. Could add this to master:analysator vlsvReader
     # ionospheric mesh is at radius (R_EARTH + 100 km), see Urs's ionosphere writeup
     n = f.get_ionosphere_node_coords()          # node = vertex of the triangular mesh
-    ec = f.get_ionosphere_element_corners()     # (Element Corners), where element = trianglular face
+    ec = f.get_ionosphere_element_corners()     # (Element Corners), where element = triangular face
     #ig_r = np.zeros(ec.shape)
     ig_r = np.zeros(np.array(ec).shape)
     for i in range(ig_r.shape[0]):
@@ -435,7 +439,8 @@ def B_ionosphere(f, coord_list = None, ig_r = None, method = 'integrate'):
         coord_list = list(ig_r * R_EARTH / R_IONO)  # Rescale ionospheric mesh (radius ~R_IONO) to a smaller grid at radius R_EARTH
     dummy = np.array(coord_list)*0. 
     try:
-        ig_inplanecurrent = f.read_variable('ig_inplanecurrent')  # height-integrated, element centered. Units [A/m]
+        ig_inplanecurrent = ig_tools.ig_inplanecurrent(f)
+        #ig_inplanecurrent = f.read_variable('ig_inplanecurrent')  # height-integrated, element centered. Units [A/m]
         if method == "local":
             ig_r_hat = vec_unit(ig_r)   # approximate (technically |ig_r| not exactly R_IONO)
             if coord_list is not None:
@@ -511,7 +516,7 @@ def save_B_vlsv(input_tuple):
         r_IB = 5 * 6.371e6
     B_inner, B_outer = B_magnetosphere(f, f_J_sidecar = f_J_sidecar, r_IB = r_IB, ig_r = ig_r)
     # write to file
-    filename_vlsv = save_dir + 'ionosphere_B_sidecar_{}.{}.vlsv'.format(run, str(fileIndex).zfill(7))
+    filename_vlsv = save_dir + 'ionosphere_B_sidecar_{}.{}_v2.vlsv'.format(run, str(fileIndex).zfill(7))
     mkdir_path(filename_vlsv)
     writer = pt.vlsvfile.VlsvWriter(f_iono, filename_vlsv, copy_meshes=("ionosphere"))
     writer.write(ig_r,'ig_r','VARIABLE','ionosphere')
@@ -590,7 +595,6 @@ if __name__ == '__main__':
     save_B_vlsv(('FHA', 1000))
     '''
 
-    '''
     # 1. integrate Biot-Savart and save output into .vlsv files (modify biot_savart.sh to use multiple nodes)
     from multiprocessing import Pool
     pool = Pool(int(ARGS.nproc))
@@ -604,11 +608,12 @@ if __name__ == '__main__':
     
     '''
     # 2. (requires #1) make a plot of Dst vs time (modify biot_savart.sh to use 1 node)
-    #f, x_inner_ref, y_inner_ref, z_inner_ref, dV_inner_ref, vg_J_eval_inner_ref = plot_Dst(run, first, last, 20)   # FIA plot wasn't working due to file permissions
-    plot_Dst(run, first, last, 20)   # FIA plot wasn't working due to file permissions
-    
+    f, x_inner_ref, y_inner_ref, z_inner_ref, dV_inner_ref, vg_J_eval_inner_ref = plot_Dst(run, first, last, 20)   # FIA plot wasn't working due to file permissions
+    #plot_Dst(run, first, last, 20)   # FIA plot wasn't working due to file permissions    
+
     # 3. (requires #1 and #2) make Dst plots as in #2, of multiple runs
     #plot_Dsts(['EGL', 'FHA', 'FIA'])
+    '''
 
 
 
