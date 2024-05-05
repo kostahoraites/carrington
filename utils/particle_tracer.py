@@ -3,7 +3,7 @@ from scipy import interpolate
 from scipy.integrate import odeint
 import ftest as ft
 from myutils import timer, save, restore, get_vlsvfile_fullpath
-from memory_profiler import profile
+#from memory_profiler import profile
 
 import matplotlib.pyplot as plt
 import matplotlib
@@ -24,6 +24,9 @@ ARGS = parser.parse_args()
 global filename
 global vlsvReader
 global interpolators
+global lightspeed
+
+lightspeed = 2.99792458e8 
 
 
 def print_initial_coords(filename):
@@ -33,7 +36,6 @@ def print_initial_coords(filename):
         for j in range(8):
             text = str(a['x_i'][i, j, :]).strip('[').strip(']').strip(',') +' ' + str(a['v_i'][i, j, :]).strip('[').strip(']').strip(',')
             print(' '.join(text.split()))
-
 
 
 def interpolators_fg(f):
@@ -69,11 +71,12 @@ def interpolators_fg(f):
     y = np.arange(mins[1], maxs[1], dcell[1]) + 0.5*dcell[1]
     z = np.arange(mins[2], maxs[2], dcell[2]) + 0.5*dcell[2]
 
-    # Create grid interpolation
-    intp_E_x = interpolate.RegularGridInterpolator((x-0.5*dcell[0], y, z), face_E[:,:,:,0])
-    intp_E_y = interpolate.RegularGridInterpolator((x, y-0.5*dcell[1], z), face_E[:,:,:,1])
-    intp_E_z = interpolate.RegularGridInterpolator((x, y, z-0.5*dcell[2]), face_E[:,:,:,2])
+    # edge-centered E-field interpolation
+    intp_E_x = interpolate.RegularGridInterpolator((x, y-0.5*dcell[1], z-0.5*dcell[2]), face_E[:,:,:,0])
+    intp_E_y = interpolate.RegularGridInterpolator((x-0.5*dcell[0], y, z-0.5*dcell[2]), face_E[:,:,:,1])
+    intp_E_z = interpolate.RegularGridInterpolator((x-0.5*dcell[0], y-0.5*dcell[1], z), face_E[:,:,:,2])
 
+    # face-centered B-field interpolation
     intp_B_x = interpolate.RegularGridInterpolator((x-0.5*dcell[0], y, z), face_B[:,:,:,0])
     intp_B_y = interpolate.RegularGridInterpolator((x, y-0.5*dcell[1], z), face_B[:,:,:,1])
     intp_B_z = interpolate.RegularGridInterpolator((x, y, z-0.5*dcell[2]), face_B[:,:,:,2])
@@ -105,9 +108,89 @@ def lorentz(X, t, q_over_m, E, B, time_sign):
         return np.hstack((drdt, dvdt))
 
 
+# Boris pushers, from https://stanczakdominik.github.io/posts/on-the-recent-on-the-boris-solver-in-particle-in-cell-simulations-paper/  
+
+def epsilon(q_m, electric_field, timestep):
+    return q_m * timestep / 2 * electric_field 
+
+def gamma_from_velocity(velocity):
+    return np.sqrt(1 - np.sum((velocity / lightspeed)**2))
+
+def gamma_from_u(u):
+    return np.sqrt(1+np.sum((u/lightspeed)**2))
+
+
+def BorisA(position, u_t_minus_half, q_m, electric_field, magnetic_field, timestep):
+    # Equations 3, 6, 7a, 8, 9, 5
+    uminus = u_t_minus_half + epsilon(q_m, electric_field, timestep)  # Eq. 3
+    magfield_norm = np.linalg.norm(magnetic_field)
+    theta = q_m * timestep / gamma_from_u(uminus) * magfield_norm  # Eq. 6
+        
+    b = magnetic_field / magfield_norm
+    
+    t = np.tan(theta/2) * b # Eq. 7a
+    
+    uprime = uminus + np.cross(uminus, t)  # Eq. 8
+    uplus = uminus + 2/(1+(t**2).sum()) * np.cross(uprime, t)  # Eq. 9
+    u_t_plus_half = uplus + epsilon(q_m, electric_field, timestep) # Eq. 5
+    new_position = u_t_plus_half / gamma_from_u(u_t_plus_half) * timestep + position # Eq. 1
+    return new_position, u_t_plus_half 
+
+def BorisB(position, u_t_minus_half, q_m, electric_field, magnetic_field, timestep):
+    # 3, 7b, 8, 9, 5
+    uminus = u_t_minus_half + epsilon(q_m, electric_field, timestep)  # Eq. 3
+    
+    # Eq. 7a
+    t = q_m * timestep / (2 * gamma_from_u(uminus)) * magnetic_field
+    
+    uprime = uminus + np.cross(uminus, t)  # Eq. 8
+    uplus = uminus + 2/(1+(t**2).sum()) * np.cross(uprime, t)  # Eq. 9
+    u_t_plus_half = uplus + epsilon(q_m, electric_field, timestep) # Eq. 5
+    new_position = u_t_plus_half / gamma_from_u(u_t_plus_half) * timestep + position # Eq. 1
+    return new_position, u_t_plus_half 
+    
+def BorisC(position, u_t_minus_half, q_m, electric_field, magnetic_field, timestep):
+    # 3, 6, 11, 12, 5
+    uminus = u_t_minus_half + epsilon(q_m, electric_field, timestep)  # Eq. 3
+    magfield_norm = np.linalg.norm(magnetic_field)
+    theta = q_m * timestep / gamma_from_u(uminus) * magfield_norm  # Eq. 6
+    
+    b = magnetic_field / magfield_norm
+    
+    u_parallel_minus = np.dot(uminus, b) * b # Eq. 11
+    uplus = u_parallel_minus + (uminus - u_parallel_minus) * np.cos(theta) + np.cross(uminus, b) * np.sin(theta) # Eq. 12
+    u_t_plus_half = uplus + epsilon(q_m, electric_field, timestep) # Eq. 5
+    new_position = u_t_plus_half / gamma_from_u(u_t_plus_half) * timestep + position # Eq. 1
+    return new_position, u_t_plus_half 
+
+
+def integrate_boris(method, X0, t, q_m, E, B, time_sign):    #args=(charge/mass,E,B,time_sign)):    # , rtol = 0.01*tol_def, atol=0.01*tol_def):
+    x = X0[0:3]
+    v = X0[3:]
+
+    X = np.zeros([t.size, 6])
+    X[0,:] = X0
+
+    for i in range(t.size-1):
+        delta_t = t[i+1] - t[i]
+        gyroperiod = abs(1. / (2. * np.pi * np.linalg.norm(B(x)) * q_m))
+        gyro_subdivide = 100.    # Boris solver timestep divides delta_t into an integer number of smaller steps,
+                                 # ensuring time_step <= (gyroperiod / gyro_subdivide)
+        nt = int(np.ceil(gyro_subdivide * abs(delta_t) / gyroperiod))   # note: nt >= 1
+        timestep = time_sign * delta_t / nt
+        for j in range(nt):
+            E_inpt = E(x)
+            B_inpt = B(x)
+            x, v = method(x, v, q_m, E_inpt, B_inpt, timestep)
+        # save particle positions at the specified times
+        X[i+1,0:3] = x
+        X[i+1,3:] = v
+
+    return X
+
 
 @timer
-def trace_particle(f, x0, v0, interpolators = None, particle = 'electron', time_sign = 1, nt = None, dt = 1e-3):
+def trace_particle(f, x0, v0, interpolators = None, particle = 'electron', time_sign = 1, nt = None, dt = 1e-3, method = 'odeint'):
     '''
     f: vlsvReader object
     x0: 3-element array, initial position [m]
@@ -116,6 +199,7 @@ def trace_particle(f, x0, v0, interpolators = None, particle = 'electron', time_
     particle: 'electron' or 'proton'
     time_sign: 1 or -1
     dt: time step
+    method: 'odeint', 'BorisA', 'BorisB', 'BorisC'
     '''
 
     if particle == 'electron':
@@ -135,10 +219,18 @@ def trace_particle(f, x0, v0, interpolators = None, particle = 'electron', time_
 
     # Initial positon and velocity components.
     X0 = np.hstack((x0, v0))
-    t = np.linspace(0, nt*dt, nt+1)
+    t = np.linspace(0, nt*dt, num = nt+1)
     # Do the numerical integration of the equation of motion.
     print('integrating motion...')
-    X = odeint(lorentz, X0, t, args=(charge/mass,E,B,time_sign,))
+    print('time', t)
+    print('method = {}'.format(method))
+
+    boris_methods = {'BorisA':BorisA, 'BorisB':BorisB, 'BorisC':BorisC}
+    if method == 'odeint':
+        tol_def = 1.49012e-8 # Default tolerance. See scipy.odeint() documentation. ewt = rtol * abs(y) + atol.
+        X = odeint(lorentz, X0, t, args=(charge/mass,E,B,time_sign,), rtol = 0.01*tol_def, atol=0.01*tol_def)
+    else:
+        X = integrate_boris(boris_methods[method], X0, t, charge/mass, E, B, time_sign) #  rtol = 0.01*tol_def, atol=0.01*tol_def)
 
     x_out = X[:, 0:3]
     v_out = X[:, 3:]
@@ -180,8 +272,8 @@ def sample_evdf(vlsvReader, x, v):
 #@profile
 def liouville_1pt(input_tuple):
     #vlsvReader, x0, v0, interpolators, particle, time_sign, nt, dt = input_tuple
-    x0, v0, particle, time_sign, nt, dt = input_tuple
-    x, v, t = trace_particle(vlsvReader, x0, v0, interpolators = interpolators, particle = particle, time_sign = time_sign, nt = nt, dt = dt)
+    x0, v0, particle, time_sign, nt, dt, method = input_tuple
+    x, v, t = trace_particle(vlsvReader, x0, v0, interpolators = interpolators, particle = particle, time_sign = time_sign, nt = nt, dt = dt, method = method)
     print('final x: ', x[-1])
     print('final v: ', v[-1])
     f = sample_evdf(vlsvReader, x[-1], v[-1])
@@ -190,8 +282,8 @@ def liouville_1pt(input_tuple):
     return f, x[-1], v[-1], x, v, t
 
 
-
-def liouville(x, run, fileIndex, save_data = False, particle = 'electron', time_sign = 1, nt = 10000, dt = 1e-3, vmin = -4e6, vmax = 4e6, nv = 2 ):
+ 
+def liouville(x, run, fileIndex, save_data = False, particle = 'electron', time_sign = 1, nt = 10000, dt = 1e-3, vmin = -4e6, vmax = 4e6, nv = 2, method = 'odeint'):
 #def liouville(vlsvReader, x, save_data = False,  interpolators = None, particle = 'electron', time_sign = 1, nt = 10000, dt = 1e-3 ):
     # note: vlsvReader and interpolators are global variables to enable Pool.map
     B = vlsvReader.read_interpolated_variable('vg_b_vol', x)
@@ -207,7 +299,7 @@ def liouville(x, run, fileIndex, save_data = False, particle = 'electron', time_
     xv_list = []        # initial conditions
     for i in range(nv):
         for j in range(nv):
-            xv_list.append( (x, vbulk + (vpar_hat * vpar[i, j]) + (vperp_hat * vperp[i, j]), particle, time_sign, nt, dt) )
+            xv_list.append( (x, vbulk + (vpar_hat * vpar[i, j]) + (vperp_hat * vperp[i, j]), particle, time_sign, nt, dt, method) )
             #xv_list.append( (x, (vpar_hat * (vbulk_mag + vpar[i, j])) + vperp_hat * vperp[i, j], particle, time_sign, nt, dt) )
             #xv_list.append( (x, (vpar_hat * (vbulk_mag + vpar[i, j])) + vperp_hat * vperp[i, j], interpolators, particle, time_sign, nt, dt) )
     with Pool(int(ARGS.nproc)) as p:
@@ -232,7 +324,7 @@ def liouville(x, run, fileIndex, save_data = False, particle = 'electron', time_
             v_trace[i].append(data[ind][4])
             t[i].append(data[ind][5])
     if save_data:
-        save('/wrk-vakka/users/horakons/carrington/data/particle_tracer/f_liouville_test_{}_{}_{}_nt_{}_x{:.1f}_y{:.1f}_z{:.1f}.pickle'.format(run, fileIndex, particle, nt, x[0]/R_EARTH, x[1]/R_EARTH, x[2]/R_EARTH), run = run, fileIndex = fileIndex, f = f, vpar = vpar, vperp = vperp, x_i = x_i, v_i = v_i, x_f = x_f, v_f = v_f, x = x_trace, v=v_trace, t=t, filename = filename)
+        save('/wrk-vakka/users/horakons/carrington/data/particle_tracer/f_liouville_test_{}_{}_{}_nt_{}_x{:.1f}_y{:.1f}_z{:.1f}_{}.pickle'.format(run, fileIndex, particle, nt, x[0]/R_EARTH, x[1]/R_EARTH, x[2]/R_EARTH, method), run = run, fileIndex = fileIndex, f = f, vpar = vpar, vperp = vperp, x_i = x_i, v_i = v_i, x_f = x_f, v_f = v_f, x = x_trace, v=v_trace, t=t, filename = filename)
     return f, vpar, vperp, x_i, v_i, x_f, v_f, x_trace, v_trace, t
 
 
@@ -245,31 +337,44 @@ def liouville(x, run, fileIndex, save_data = False, particle = 'electron', time_
 
 
 if __name__ == '__main__':
+
+    # TEST (constant fields)
+    #run = 'TEST'
+    #fileIndex = 0
+    #filename = '/wrk-vakka/users/horakons/carrington/data/particle_tracer/vlsv/E_0_-1_0_e-3_B_0_0_1_e-8.vlsv'
+
+    # EGL
     #run = 'EGL'
     #fileIndex = 1760
+
+    # EGI
     run = 'EGI'
-    fileIndex = 1199  # 1506
+    fileIndex = 1506  # 1199
+
     filename = get_vlsvfile_fullpath( run, fileIndex)
+
     vlsvReader = ft.f(filename)
     interpolators = interpolators_fg(vlsvReader)
     # "initial" conditions for (back-)tracing
-    x0 = R_EARTH * np.array([11.5,0,0])
+    x0 = R_EARTH * np.array([11.5,0,0])          # [11.5, 0, 0]. Note to compare with Lorentziator, must be within box |x|,|y|,|z|< 20 RE
     particle = 'electron'
-    nt = 20000
+    nt = 80000
     #nt = 600
-    dt = 5e-4           # estimate: omega_p ~ 1 Hz, omega_e ~ 1 kHz in solar wind
+    dt = 5e-4             # 0.1?,   estimate: omega_p ~ 1 Hz, omega_e ~ 1 kHz in solar wind
     time_sign = -1
     # trace particle trajectories
     #v0 = np.array([0,0,0])
     #x, v, t = trace_particle(f, x0, v0, interpolators = interpolators, particle = particle, time_sign = time_sign, nt = nt, dt = dt)
     if particle == 'electron': 
-        vmin = -1e7
-        vmax = 1e7
+        vmin = -5e6 #-2e7
+        vmax = 5e6 #2e7
     elif particle == 'proton':
         vmin = -1e5
         vmax = 1e5
     nv = 8
-    f, vpar, vperp, x_i, v_i, x_f, v_f, x, v, t = liouville(x0, run, fileIndex, save_data = True, particle = particle, time_sign = time_sign, nt = nt, dt = dt, vmin = vmin, vmax = vmax, nv = nv )
+    method = 'BorisA'
+    f, vpar, vperp, x_i, v_i, x_f, v_f, x, v, t = liouville(x0, run, fileIndex, save_data = True, particle = particle, time_sign = time_sign,
+                                                            nt = nt, dt = dt, vmin = vmin, vmax = vmax, nv = nv, method = method)
     print(vpar)
     print(vperp)
     print(f)

@@ -82,11 +82,11 @@ def get_filename(run, fileIndex):
         filename = "bulk.{}.vlsv_fg".format(str(fileIndex).zfill(7) )
     elif run.upper() == 'EGILIKE2':   # test run
         filename = "bulk.{}.vlsv".format(str(fileIndex).zfill(7) )
-    elif run.upper() == 'FHA':   # test run
+    elif run.upper() == 'FHA':
         filename = "bulk1.{}.vlsv".format(str(fileIndex).zfill(7) )
-    elif run.upper() == 'FHAFGB':   # test run
+    elif run.upper() == 'FHAFGB':
         filename = "bulk_with_fg_10.{}.vlsv".format(str(fileIndex).zfill(7) )
-    elif run.upper() == 'FIA':   # test run
+    elif run.upper() == 'FIA':
         filename = "bulk1.{}.vlsv".format(str(fileIndex).zfill(7) )
     return filename
 

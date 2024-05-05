@@ -20,7 +20,8 @@ def read_vsc_data(filename, n_sc = None, tvar='t'):
         # Read the header to get the variable names
         header = f.readline()[1:]
         varnames = header.split(delimiter)
-        varnames[-1] = varnames[-1][:-1]     # get rid of new line character in last field name
+        if varnames[-1][-1] == "\n":
+           varnames[-1] = varnames[-1][:-1]     # get rid of new line character in last field name
 
         converters = {}
         for c in range(len(varnames)):

@@ -45,6 +45,6 @@ export OMP_NUM_THREADS=$t
 export PATH=/proj/jesuni/projappl/tex-basic/texlive/2020/bin/x86_64-linux:$PATH
 #module load Python/3.7.2-GCCcore-8.2.0
 
-time python utils/particle_tracer.py -nproc 64
+time python /wrk-vakka/users/horakons/carrington/utils/particle_tracer.py -nproc 64
 
 echo Job complete.

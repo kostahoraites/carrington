@@ -275,6 +275,8 @@ if args.timeseries:
         fig, axes = plt.subplots(nvar, 1)      #axes is a 1D array with npos elements
         for j, key in enumerate(keys):
             label = make_label(key, filter=args.filter, dt=args.dt, abs = args.abs)
+            print(key)
+            print(dct_plot.keys())
             axes[j].plot(t[:,i], dct_plot[key][:,i], label = label)
             if args.log:
                 if np.min(dct_plot[key][:,i]) >= 0:

@@ -62,10 +62,8 @@ if __name__ == '__main__':
     #plt.show()
     
     if run == "FHA":
-        nmin = 501    # 501-1000 using _v2 sidecars
-        nmax = 1000    
-        #nmin = 1001  # 1001-1612 using original sidecars
-        #nmax = 1612
+        nmin = 501    # 501-1000 using _v2 sidecars, 1001-1612 using original sidecars
+        nmax = 1612       # 1000
     elif run == "FIA":
         nmin = 1
         nmax = 817         #865 (files 818-819 missing)
@@ -90,8 +88,11 @@ if __name__ == '__main__':
     #populate B arrays
     for i in range(nmin, nmax+1):
         #print(i)
-        #f = ft.f(dir + "/ionosphere_B_sidecar_{}.{}.vlsv".format(run, str(i).zfill(7)))     # FHA: file indices 1001 - 1612
-        f = ft.f(dir + "/ionosphere_B_sidecar_{}.{}_v2.vlsv".format(run, str(i).zfill(7)))     # FHA: file indices 501 - 1000 (missing horizontal currents in original sidecars is reconstructed in v2)
+        if i<=1000:
+            #f = ft.f(dir + "/ionosphere_B_sidecar_{}.{}.vlsv".format(run, str(i).zfill(7)))     # FHA: file indices 1001 - 1612
+            f = ft.f(dir + "/ionosphere_B_sidecar_{}.{}_v2.vlsv".format(run, str(i).zfill(7)))     # FHA: file indices 501 - 1000 (missing horizontal currents in original sidecars is reconstructed in v2)
+        else:
+            f = ft.f(dir + "/ionosphere_B_sidecar_{}.{}.vlsv".format(run, str(i).zfill(7)))     # FHA: file indices 1001 - 1612
         try:
             ig_B_ionosphere = f.read_variable('ig_B_ionosphere')
             ig_B_ionosphere_arr[:,:,i-nmin] = ig_B_ionosphere
@@ -137,7 +138,7 @@ if __name__ == '__main__':
         E_north, E_east = E_horizontal(ig_dB_dt_arr[i_pos,:,:], pos[i_pos,:], time, sigma = 1e-3)
         E_north_arr[i_pos,:] = E_north
         E_east_arr[i_pos,:] = E_east
-        print(i_pos)
+        #print(i_pos)
     
     # write geoelectric field to .vlsv
     
@@ -146,6 +147,7 @@ if __name__ == '__main__':
     
     for i, t in enumerate(time):
         # write to file
+        print(i)
         filename_vlsv = save_dir + 'ionosphere_gic_{}_{}.vlsv'.format(run, str(int(t)).zfill(7))
         mkdir_path(filename_vlsv)
         writer = pt.vlsvfile.VlsvWriter(f_iono, filename_vlsv)

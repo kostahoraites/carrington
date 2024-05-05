@@ -1,0 +1,10 @@
+call with ./wrapper.sh
+
+concatenate output with ./catfiles.sh
+
+DONT USE SCANCEL TO CANCEL THESE JOBS! Has a tendency to cause nodes to go to drain state
+
+Remember to clean up unnecessary lines (at beginning and end of file) that get printed into output data file manually
+
+Newer version uses vlsvintpol_mpi.py, written by Kostis. 
+Checked that the two programs give the same output.
