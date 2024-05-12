@@ -1,5 +1,5 @@
 
-
+as of 2022:
 carrington.py makes plots of a single frame
  -sbatch carrington.sh calls carrington.py for a single time, makes plots in the plots/ directory
  -sbatch carrington_movie.sh calls carrington.py in an array job
