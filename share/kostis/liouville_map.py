@@ -37,20 +37,35 @@ def sample_evdf(v_f):
 
 
 
-def liouville_map(ptr_i, ptr_f):
+def liouville_map(ptr_f):
     '''
     Inputs:
-     ptr_i ("initial" .ptr file, in the magnetosheath)
      ptr_f ("final" .ptr file, in the solar wind)
+     technically, this function handles '*.ptr' (Lorentziator), '*.ptr2' (Lorentziator Rust re-implemtation), and '*.pck' (particle_tracer.py) files
     '''
     import ptrReader
-    p_i = ptrReader.read_ptr_file(ptr_i)
-    p_f = ptrReader.read_ptr_file(ptr_f)
-    nv = int( (p_i.pos().size /3.)**0.5 )
-    x_i = p_i.pos().reshape([nv,nv,3])   # shape (nv^2, 3) -> (nv,nv,3)
-    v_i = p_i.vel().reshape([nv,nv,3])   # shape (nv^2, 3) -> (nv,nv,3)
-    x_f = p_f.pos().reshape([nv,nv,3])   # shape (nv^2, 3) -> (nv,nv,3)
-    v_f = p_f.vel().reshape([nv,nv,3])   # shape (nv^2, 3) -> (nv,nv,3)    
+    if ptr_f[-3:] == 'ptr':
+        p_f = ptrReader.read_ptr_file(ptr_f)
+        nv = int( (p_f.pos().size /3.)**0.5 )
+        x_f = p_f.pos().reshape([nv,nv,3])   # shape (nv^2, 3) -> (nv,nv,3)
+        v_f = p_f.vel().reshape([nv,nv,3])   # shape (nv^2, 3) -> (nv,nv,3)
+    elif ptr_f[-4:] == 'ptr2':
+        x, y, z, vx, vy, vz = ptrReader.read_ptr2_file(ptr_f)
+        nv = int( vx.size**0.5 )
+        x_f = np.zeros([nv, nv, 3])
+        v_f = np.zeros([nv, nv, 3])
+        x_f[:,:,0] = x.reshape([nv, nv])
+        x_f[:,:,1] = y.reshape([nv, nv])
+        x_f[:,:,2] = z.reshape([nv, nv])
+        v_f[:,:,0] = vx.reshape([nv, nv])
+        v_f[:,:,1] = vy.reshape([nv, nv])
+        v_f[:,:,2] = vz.reshape([nv, nv])
+    elif ptr_f[-6:] == 'pickle':
+        from myutils import restore
+        d = restore(ptr_f)
+        x_f = d['x_f']
+        v_f = d['v_f']
+        nv = x_f.shape[0]
 
     # HARD CODED LORENTZIATOR CONFIG PARAMETERS:
     vmin = -1e7  # m/s
@@ -68,7 +83,7 @@ def liouville_map(ptr_i, ptr_f):
 
     # Mask out magnetosheath data (simple test)
     r_f = np.linalg.norm(x_f, axis=-1)
-    r_f_mask = (r_f < 17*R_EARTH)
+    r_f_mask = (r_f < 16*R_EARTH)
     f_masked = deepcopy(f)
     f_masked[r_f_mask] = -1e-15  # dummy value (<0)
 
@@ -92,6 +107,16 @@ def liouville_map(ptr_i, ptr_f):
 
 
 if __name__ == '__main__':
-    ptr_i="/wrk-vakka/users/kpapadak/lorentziator/test_configs/population.0000091.ptr"
-    ptr_f="/wrk-vakka/users/kpapadak/lorentziator/test_configs/population.0000092.ptr"
-    liouville_map(ptr_i, ptr_f)
+    # particle_tracer:
+    ptr_f="/wrk-vakka/users/horakons/carrington/data/particle_tracer/f_liouville_test_EGI_1506_electron_nt_80000_x11.5_y0.0_z0.0.pickle"   # flat-top run
+    #ptr_f="/wrk-vakka/users/horakons/carrington/data/particle_tracer/f_liouville_test_EGI_1200_electron_nt_200000_x13.0_y0.0_z0.0.pickle"
+
+    # Lorentziator:
+    #ptr_f="/wrk-vakka/users/horakons/carrington/data/lorentziator/electron/EGI_1199_1198.9_x19RE/population.0000200.ptr"
+    #ptr_f="/wrk-vakka/users/kpapadak/lorentziator/test_configs/population.0000092.ptr"
+    #ptr_f="/wrk-vakka/users/horakons/carrington/data/lorentziator/electron/EGI_1199_1198.9_x19RE/population.0000200.ptr"
+
+    # Lorenztiator (Rust):
+    #ptr_f="/wrk-vakka/users/kpapadak/tracer/hrt4/population.0000199.ptr2"
+
+    liouville_map(ptr_f)
