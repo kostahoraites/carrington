@@ -16,10 +16,11 @@ def lorentziator_ic(vlsvobj, x_i_list, vmin, vmax, nv, fileout = "input.txt"):
     '''
     x_i = np.zeros([len(x_i_list), nv, nv, 3])
     v_i = np.zeros([len(x_i_list), nv, nv, 3])
-    dv = (vmax - vmin) / nv
+    dv = (vmax - vmin) / (nv-1)
     vpar, vperp = np.meshgrid( np.arange(vmin, vmax+dv, dv), np.arange(vmin,vmax+dv, dv), indexing='ij')
     f = open(fileout, "w")
 
+    nx = len(x_i_list)
     for ix, x in enumerate(x_i_list):
         B = vlsvobj.read_interpolated_variable('vg_b_vol', x)
         vbulk = vlsvobj.read_interpolated_variable('proton/vg_v', x)
@@ -29,7 +30,7 @@ def lorentziator_ic(vlsvobj, x_i_list, vmin, vmax, nv, fileout = "input.txt"):
         for i in range(nv):
             for j in range(nv):
                 v = vbulk + (vpar_hat * vpar[i, j]) + (vperp_hat * vperp[i, j])
-                if (i == (nv-1)) & (j == (nv-1)):
+                if (i == (nv-1)) & (j == (nv-1)) & (ix == nx):
                     suffix = ""
                 else:
                     suffix = "\n"
@@ -51,6 +52,7 @@ if __name__ == "__main__":
     run = 'EGI'
     fileIndex = 1500  # time to start tracing.
     vlsvobj = pt.vlsvfile.VlsvReader(get_vlsvfile_fullpath(run, fileIndex))
+    #x_i_list = [ [(11.5 + i*1.5)* R_EARTH, 0*R_EARTH, 0*R_EARTH] for i in range(2)]
     x_i_list = [ [13* R_EARTH, 0*R_EARTH, 0*R_EARTH] ]
     fileout = "input.txt"
     x_i, v_i = lorentziator_ic(vlsvobj, x_i_list, vmin, vmax, nv, fileout = fileout)
