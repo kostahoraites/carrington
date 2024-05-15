@@ -45,12 +45,12 @@ def lorentziator_ic(vlsvobj, x_i_list, vmin, vmax, nv, fileout = "input.txt"):
 
 
 if __name__ == "__main__":
-    vmin = -1e7     # ~1keV
-    vmax = 7.5e6
+    vmin = -5e6     # ~1keV
+    vmax = 3.75e6
     nv = 8        # phase space nv^2 elements (vpar x vper)
     print('') 
     run = 'EGI'
-    fileIndex = 1500  # time to start tracing.
+    fileIndex = 1300  # time to start tracing.
     vlsvobj = pt.vlsvfile.VlsvReader(get_vlsvfile_fullpath(run, fileIndex))
     #x_i_list = [ [(11.5 + i*1.5)* R_EARTH, 0*R_EARTH, 0*R_EARTH] for i in range(2)]
     x_i_list = [ [13* R_EARTH, 0*R_EARTH, 0*R_EARTH] ]
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     # save metadata
     # note time step information needs to be input by hand separately. It's a bit klugy but just saving it here in the metadata file
     dt = -0.5
-    t = np.arange(1300, 1500, dt)
+    t = np.arange(1300, 1298.5, dt)
     save("metadata.pck", vmin = vmin, vmax = vmax, nv = nv, run = run, fileIndex = fileIndex, x_i_list = x_i_list, x_i = x_i, v_i = v_i, t = t, dt = dt)
     #fileout = "/wrk-vakka/users/horakons/carrington/data/particle_tracer/input_lorentziator.txt"
     

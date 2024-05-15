@@ -118,5 +118,6 @@ if __name__ == '__main__':
 
     # Lorenztiator (Rust):
     #ptr_f="/wrk-vakka/users/kpapadak/tracer/hrt4/population.0000199.ptr2"
+    ptr_f="/wrk-vakka/users/kpapadak/tracer/population.0000199.ptr2"
 
     liouville_map(ptr_f)

@@ -3,13 +3,13 @@
 
 #SBATCH -J ptest
 #SBATCH --output=slurm-%x.%j.out
-#SBATCH -t 23:00:00
+#SBATCH -t 95:59:59
 #SBATCH -M carrington
-#SBATCH --partition=short
+#SBATCH --partition=long
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=64       # cpu-cores per task (>1 if multi-threaded tasks)
-#SBATCH --mem=160G # memory per node 20G per task?
+#SBATCH --mem=400G # memory per node 20G per task?
 ##SBATCH --no-requeue
 
 
