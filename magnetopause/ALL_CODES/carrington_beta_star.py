@@ -595,7 +595,8 @@ def fit_magnetopause(f, run = '', root_dir = '', fileIndex = '', threshold = 1, 
             pt.plot.plot_colormap3dslice(filename=bulkname,var=plotvar, boxre=[-11, 11, -11, 11], normal =normal, run=run,
                                          colormap='seismic',vmin=vmin,vmax=vmax,step=j,outputdir=outputLocation,
                                          outputfile='beta_star_colormap_xy_{}_{}.pdf'.format(run, str(j).zfill(5)), 
-                                         Earth=1, streamlines=streamlines, streamlinedensity=sl_density, streamlinethick = streamlinethick, streamlinecolor = sl_color, cutpointre=0, axes = ax, scale=scale, useimshow=True)
+                                         Earth=1, streamlines=streamlines, streamlinedensity=sl_density, streamlinethick = streamlinethick, streamlinecolor = sl_color, 
+                                         cutpointre=0, axes = ax, scale=scale, useimshow=True)
 
             
             r_GEO = 6.6

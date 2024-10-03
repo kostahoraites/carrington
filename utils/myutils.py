@@ -59,6 +59,8 @@ def get_bulklocation(run):
         location = "/wrk-vakka/group/spacephysics/vlasiator/3D/FHA/bulk_with_fg_10/"
     elif run.upper() == 'FIA':
         location = "/wrk-vakka/group/spacephysics/vlasiator/3D/FIA/bulk/"
+    elif run.upper() == 'FID':
+        location = "/wrk-vakka/group/spacephysics/vlasiator/3D/FID/bulk1/"
     return location
 
 
@@ -88,10 +90,12 @@ def get_filename(run, fileIndex):
         filename = "bulk_with_fg_10.{}.vlsv".format(str(fileIndex).zfill(7) )
     elif run.upper() == 'FIA':
         filename = "bulk1.{}.vlsv".format(str(fileIndex).zfill(7) )
+    elif run.upper() == 'FID':
+        filename = "bulk1.{}.vlsv".format(str(fileIndex).zfill(7) )
     return filename
 
 
-def timeseries(run, var_list, start, stop, filestem = None):     #, step?
+def timeseries(run, var_list, start, stop, filestem = None, x = None):     #, step?
     '''
         run: name of the Vlasiator run. ex.  'EGL', 'FHA'
         var_list: a list of variable names (strings)
@@ -99,11 +103,18 @@ def timeseries(run, var_list, start, stop, filestem = None):     #, step?
         start: first timestep
         stop: last timestep
         filestem: set this keyword to the filename, omitting the end 'XXXXXXX.vlsv'
+
+        output: dictionary of variables, with keys from the input var_list
     '''
     import pytools as pt
     if type(var_list) == str:
         var_list = [var_list]
     dct = {}
+    def reader_wrapper(f, v, operator = 'pass', x = None):
+        if x is None:
+            return f.read_variable(v, operator = operator)
+        else:
+            return f.read_interpolated_variable(v, x, operator = operator)
     for var in var_list:
         var_timeseries = []
         for fileIndex in range(start, stop+1):
@@ -115,11 +126,23 @@ def timeseries(run, var_list, start, stop, filestem = None):     #, step?
             if '.' in var:
                 l = var.split('.')
                 vartemp = l[0]; operator = l[1]
-                var_timeseries.append(f.read_variable(vartemp, operator = operator))
+                #var_unsorted = f.read_variable(vartemp, operator = operator, x = x)
+                var_unsorted = reader_wrapper(f, vartemp, operator = operator, x = x)
             else:
-                var_timeseries.append(f.read_variable(var))
+                #var_unsorted = f.read_variable(var, x = x)
+                var_unsorted = reader_wrapper(f, var, x = x)
+            try:
+                #cellids = f.read_variable('cellid', x = x)
+                cellids = reader_wrapper(f, 'cellid', x = x)
+                cid_sort = cellids.argsort()
+                var_timeseries.append(var_unsorted[cid_sort])   # sort vg_ data by cellid
+            except:
+                if x is None:
+                    print('variable {} not sortable by Cell ID!'.format(var))
+                var_timeseries.append(var_unsorted)
         var_timeseries = np.array(var_timeseries)
         dct[var] = var_timeseries
+        
     return dct
 
 

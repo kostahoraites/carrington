@@ -1,16 +1,26 @@
 #!/bin/bash -l
 ###carrington:
 
-#SBATCH -J ptest-test-convergence-80s-t0_1300
+#SBATCH -J BS-FHA
 #SBATCH --output=slurm-%x.%j.out
-#SBATCH -t 72:00:00
+#SBATCH -t 48:00:00
 #SBATCH -M carrington
 #SBATCH --partition=long
-#SBATCH --ntasks=1
+#SBATCH --ntasks=1               # tasks per node
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=64       # cpu-cores per task (>1 if multi-threaded tasks)
-#SBATCH --mem=400G # memory per node 20G per task?
-##SBATCH --no-requeue
+#SBATCH --mem=400G # memory per node
+#SBATCH --array=0-18%4
+     # X-Y%Z means "run with $SLURM_ARRAY_TASK_ID from X to Y, on at most Z nodes at a time"
+     # run EGL: 0-17
+     # run FHA: 0-18, 7-18 for t>=1000
+     # run FIA: 0-13
+     # run FID: 0-8  # FID currrently  501-1066s
+     ### ^ task number indexed by $SLURM_ARRAY_TASK_ID ^
+
+###SBATCH --no-requeue
+###SBATCH --exclude=carrington-2
+
 
 
 umask 007
@@ -42,9 +52,14 @@ export OMP_NUM_THREADS=$t
 
 
 
-export PATH=/proj/jesuni/projappl/tex-basic/texlive/2020/bin/x86_64-linux:$PATH
+#export PATH=/proj/jesuni/projappl/tex-basic/texlive/2020/bin/x86_64-linux:$PATH
 #module load Python/3.7.2-GCCcore-8.2.0
 
-time python /wrk-vakka/users/horakons/carrington/utils/particle_tracer.py -nproc 64
+NPROC=64
+RUN=FHA
+
+module list
+time srun python /wrk-vakka/users/horakons/carrington/utils/biot_savart.py -nproc $NPROC -task $SLURM_ARRAY_TASK_ID -run $RUN
+#time srun sg grp-datacloud-spacephysics -c "python /wrk-vakka/users/horakons/carrington/utils/biot_savart.py" -nproc $NPROC -task $SLURM_ARRAY_TASK_ID -run $RUN             # Jonas suggested using sg to handle weird group permission issue. Instead we changed the permissions on the .vlsv files
 
 echo Job complete.

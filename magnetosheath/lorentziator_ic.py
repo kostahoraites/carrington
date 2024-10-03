@@ -4,7 +4,7 @@ from multiprocessing import Pool
 from myutils import get_vlsvfile_fullpath, save
 
 global R_EARTH
-R_EARTH = 6.371e6
+R_EARTH = 6378137.0  # 6.371e6
 
 def lorentziator_ic(vlsvobj, x_i_list, vmin, vmax, nv, fileout = "input.txt"):
     '''

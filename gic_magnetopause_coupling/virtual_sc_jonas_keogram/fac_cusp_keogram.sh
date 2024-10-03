@@ -1,13 +1,13 @@
-var='proton/vg_rho'  #'vg_j_parallel'
+var='vg_j'  #'vg_j_parallel'
 startfile=501
-endfile=510 # 1598
+endfile=1598
 bulkpath="/wrk-vakka/group/spacephysics/vlasiator/3D/FHA/bulk1"
 bulkprefix="bulk1"
 outputdir="./"
 outputname="test.png"
 intpol=1
 filt=0
-#op='x'
+op='x'
 cmap='bwr'
 pointfile='/wrk-vakka/users/horakons/carrington/gic_magnetopause_coupling/virtual_sc_jonas_keogram/fg_innerboundary_btrace_FHAFGB.txt'
 
@@ -30,6 +30,6 @@ pointfile='/wrk-vakka/users/horakons/carrington/gic_magnetopause_coupling/virtua
 #    )
 
 
-#python /home/horakons/proj/analysator/scripts/cutthrough_timeseries.py -var $var -fnr 1000 1200 -bulkpath $bulkpath -bulkprefix $bulkprefix -outputdir $outputdir -outputname $outputname -intpol $intpol -filt $filt -op $op -cmap $cmap -pointfile $pointfile
-python /home/horakons/proj/analysator/scripts/cutthrough_timeseries.py -var $var -fnr $startfile $endfile -bulkpath $bulkpath -bulkprefix $bulkprefix -outputdir $outputdir -outputname $outputname -intpol $intpol -filt $filt -cmap $cmap -pointfile $pointfile
+python /home/horakons/proj/analysator/scripts/cutthrough_timeseries.py -var $var -fnr $startfile $endfile -bulkpath $bulkpath -bulkprefix $bulkprefix -outputdir $outputdir -outputname $outputname -intpol $intpol -filt $filt -op $op -cmap $cmap -pointfile $pointfile
+#python /home/horakons/proj/analysator/scripts/cutthrough_timeseries.py -var $var -fnr $startfile $endfile -bulkpath $bulkpath -bulkprefix $bulkprefix -outputdir $outputdir -outputname $outputname -intpol $intpol -filt $filt -cmap $cmap -pointfile $pointfile
 

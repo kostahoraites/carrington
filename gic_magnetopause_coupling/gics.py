@@ -1,16 +1,21 @@
 #@timer
 #@jit(nopython=True)
-def E_horizontal(dB_dt, pos, time, sigma = 0e-3):
+
+def E_horizontal(dB_dt, pos, time, sigma = 1e-3, method = 'liu'):
     '''
-        Calculate the horizontal electric field by integrating components of dB/dt 
+        Calculate the horizontal electric field by integrating components of dB/dt
             References: Cagniard et al 1952 (eq. 12), Pulkinnen et al 2006 (eq. 19)
         Inputs:
-            dB_dt: cartesian dB/dt    [T/s] array dimension [len(time), 2]
-            x: cartesian position [m]       2-element array
-            time: 0D array of times [s]
+            dB_dt: cartesian dB/dt    [T/s] array dimension [3, len(time)]
+            pos: cartesian position [m] 1D 3-element array, vector position
+            time: 1D array of times [s], monotonically increasing
 
         Keywords:
             sigma = ground conductivity (siemens/meter)
+            method:
+                'liu': use integration method described in Liu et al., (2009) doi:10.1029/2008SW000439, 2009
+                       this method is exact for piecewise linear B (i.e., piecewise constant dB/dt)
+                'RH-riemann': use right-handed Riemann sum.
     '''
     mu_0 = 1.25663706e-6    # permeability of free space
     E_north = np.zeros(time.size)
@@ -18,19 +23,26 @@ def E_horizontal(dB_dt, pos, time, sigma = 0e-3):
     dB_dt_r, dB_dt_theta, dB_dt_phi = cartesian_to_spherical_vector(dB_dt[0,:], dB_dt[1,:], dB_dt[2,:], pos[0], pos[1], pos[2])
     dB_dt_north = -dB_dt_theta; dB_dt_east = dB_dt_phi
     t0 = time[1] - time[0]
-    for i in range(1, time.size):
-        t = time[i]
-        tp = time[1:i+1]          
+    for i in range(0, time.size):
+        t = time[i]   # monotonically increasing from t[0]
+        tp = time[1:i+1]
         dt = tp - time[0:i]
-        # general equation for E (e.g., Pulkinnen et al. 2005, eq. 19. Note in their formula there is a typo (comparing with Cagniard 1952): should be dB/dt not dB/dt')
-        E_north[i] = -(1. / np.sqrt(np.pi * mu_0 * sigma)) * np.sum(dt * dB_dt_east[1:i+1] / np.sqrt(t-tp + t0))
-        E_east[i] = (1. / np.sqrt(np.pi * mu_0 * sigma)) * np.sum(dt * dB_dt_north[1:i+1] / np.sqrt(t-tp + t0))  # note the sign
+        if method == 'liu':  # implement Liu et al (2009), eq. 5
+            t_1 = t - tp
+            t_2 = t - time[0:i]   # elementwise, t_2 > t_1
+            dB_north = dB_dt_north[0:i] * dt[0:i]
+            dB_east = dB_dt_east[0:i] * dt[0:i]
+            E_north[i] = np.sum(-(2. / np.sqrt(np.pi * mu_0 * sigma * dt[0:i])) * dB_east * (np.sqrt(t_2) - np.sqrt(t_1) ) )
+            E_east[i] = np.sum((2. / np.sqrt(np.pi * mu_0 * sigma * dt[0:i])) * dB_north * (np.sqrt(t_2) - np.sqrt(t_1) ) )
+        elif method == 'RH-riemann':
+            if i != 0:
+                E_north[i] = -(1. / np.sqrt(np.pi * mu_0 * sigma)) * np.sum(dt * dB_dt_east[1:i+1] / np.sqrt(t-tp + t0))
+                E_east[i] = (1. / np.sqrt(np.pi * mu_0 * sigma)) * np.sum(dt * dB_dt_north[1:i+1] / np.sqrt(t-tp + t0))  # note the sign
     return E_north, E_east
-
 
 if __name__ == '__main__':    
     '''
-    Before running cell blocks below, requires running biot_savart.py 
+    Before running cell blocks below, requires running biot_savart.py to generate ground magnetic field sidecar files
     (option #1 in main()) to generate total ground magnetic field files
     '''
     
@@ -62,14 +74,14 @@ if __name__ == '__main__':
     #plt.show()
     
     if run == "FHA":
-        nmin = 501    # 501-1000 using _v2 sidecars, 1001-1612 using original sidecars
-        nmax = 1612       # 1000
+        nmin = 501   
+        nmax = 1612
     elif run == "FIA":
         nmin = 1
         nmax = 817         #865 (files 818-819 missing)
     elif run == "EGL":
         nmin = 621
-        nmax = 1760    # 1004
+        nmax = 1760
     time = np.linspace(nmin, nmax, nmax - nmin + 1)
     
     pos = f.read_variable('ig_r')   # ionospheric grid.  array dimensions (43132, 3)
@@ -88,11 +100,14 @@ if __name__ == '__main__':
     #populate B arrays
     for i in range(nmin, nmax+1):
         #print(i)
+        f = ft.f(dir + "/ionosphere_B_sidecar_{}.{}.vlsv".format(run, str(i).zfill(7)))  # updated files (previously in v2 and v3 only some times had all ground magnetic data)
+        '''
         if i<=1000:
             #f = ft.f(dir + "/ionosphere_B_sidecar_{}.{}.vlsv".format(run, str(i).zfill(7)))     # FHA: file indices 1001 - 1612
-            f = ft.f(dir + "/ionosphere_B_sidecar_{}.{}_v2.vlsv".format(run, str(i).zfill(7)))     # FHA: file indices 501 - 1000 (missing horizontal currents in original sidecars is reconstructed in v2)
+            f = ft.f(dir + "/v2/ionosphere_B_sidecar_{}.{}.vlsv".format(run, str(i).zfill(7)))     # FHA: file indices 501 - 1000 (missing horizontal currents in original sidecars is reconstructed in v2)
         else:
             f = ft.f(dir + "/ionosphere_B_sidecar_{}.{}.vlsv".format(run, str(i).zfill(7)))     # FHA: file indices 1001 - 1612
+        '''
         try:
             ig_B_ionosphere = f.read_variable('ig_B_ionosphere')
             ig_B_ionosphere_arr[:,:,i-nmin] = ig_B_ionosphere
@@ -133,9 +148,9 @@ if __name__ == '__main__':
             ig_dB_dt_outer_arr[:,:,i-nmin] = ig_B_outer_arr[:,:,i-nmin] - ig_B_outer_arr[:,:,i-nmin-1]
     
     #i_pos = 0
-    #E_north, E_east = E_horizontal(ig_dB_dt_arr[i_pos,:,:], pos[i_pos,:], time, sigma = 1e-3)
+    #E_north, E_east = E_horizontal(ig_dB_dt_arr[i_pos,:,:], pos[i_pos,:], time, sigma = 1e-3, method = 'liu')
     for i_pos in range(ig_dB_dt_arr.shape[0]):
-        E_north, E_east = E_horizontal(ig_dB_dt_arr[i_pos,:,:], pos[i_pos,:], time, sigma = 1e-3)
+        E_north, E_east = E_horizontal(ig_dB_dt_arr[i_pos,:,:], pos[i_pos,:], time, sigma = 1e-3, method = 'liu')
         E_north_arr[i_pos,:] = E_north
         E_east_arr[i_pos,:] = E_east
         #print(i_pos)
@@ -151,6 +166,7 @@ if __name__ == '__main__':
         filename_vlsv = save_dir + 'ionosphere_gic_{}_{}.vlsv'.format(run, str(int(t)).zfill(7))
         mkdir_path(filename_vlsv)
         writer = pt.vlsvfile.VlsvWriter(f_iono, filename_vlsv)
+        writer.write(t,'time','PARAMETER','ionosphere')
         writer.write(pos,'ig_r','VARIABLE','ionosphere')
         writer.write(E_north_arr[:,i],'ig_E_north','VARIABLE','ionosphere')
         writer.write(E_east_arr[:,i],'ig_E_east','VARIABLE','ionosphere')
@@ -175,7 +191,7 @@ if __name__ == '__main__':
         print(pos[ind_min,2])
         print(lat_deg[i], np.nanmax(1e6 * E_north_arr[ind_min,:]))
         # PLOT:
-        # geoelectic field
+        # geoelectric field
         plt.title('GIC Lat. = {} deg., noon, {}'.format(int(lat_deg[i]), run))
         plt.xlabel('time [sec]')
         plt.ylabel(r'Geoelectric field [$\mu$V/m]')

@@ -57,7 +57,7 @@ def parallelize_this(t):
     mp_nose_x = fit_magnetopause(f, run = run, root_dir = root_dir, fileIndex = fileIndex, threshold = threshold, delta = delta, plot = True)  # magnetopause position at time t
     RE = 6371000        # m
     #dx = 4000000       # look behind the magnetopause a short distance --- 4 cells?
-    Rmax = mp_nose_x + 5.  # integrate density out to this distance (in RE) to estimate inertia term C_I (see Freeman 1998)
+    Rmax = mp_nose_x + 4.  # integrate density out to this distance (in RE) to estimate inertia term C_I (see Freeman 1998)
     dx = RE / 2         # look behind the magnetopause a short distance --- 4 cells?
     coord_mp = np.array([(mp_nose_x * RE)-dx, 0, 0])
     coord_bs = np.array([Rmax*RE, 0, 0])

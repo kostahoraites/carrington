@@ -2,7 +2,7 @@ import numpy as np
 from scipy import interpolate
 from scipy.integrate import odeint
 import ftest as ft
-from myutils import timer, save, restore, get_vlsvfile_fullpath
+from myutils import timer, save, restore, get_vlsvfile_fullpath  #, sidecar
 #from memory_profiler import profile
 
 import matplotlib.pyplot as plt
@@ -40,30 +40,28 @@ def print_initial_coords(filename):
             print(' '.join(text.split()))
 
 
-def interpolators_fg(f, xrange = None, yrange = None, zrange = None):
-    '''
-    make E and B interpolators
-    works for runs with field grid (fg_) data. e.g., runs  EGI, EGL, EGP (occasional FHA snapshots?)
-    xrange, yrange, zrange: set to two-element list/array of floats [min, max] to consider only a spatial subset of the fg grid
-        e.g. xrange = [-1e8, 1e8]  # meters
-    '''
+#@sidecar
+def read_fg(vlsv, xrange = None, yrange = None, zrange = None):
+
+    print('read_fg vlsv ', vlsv)
+
     # Read cellids in order to sort variables
-    cellids = f.read_variable("CellID")
-    xmin = f.read_parameter('xmin')
-    xmax = f.read_parameter('xmax')
-    ymin = f.read_parameter('ymin')
-    ymax = f.read_parameter('ymax')
-    zmin = f.read_parameter('zmin')
-    zmax = f.read_parameter('zmax')
+    cellids = vlsv.read_variable("CellID")
+    xmin = vlsv.read_parameter('xmin')
+    xmax = vlsv.read_parameter('xmax')
+    ymin = vlsv.read_parameter('ymin')
+    ymax = vlsv.read_parameter('ymax')
+    zmin = vlsv.read_parameter('zmin')
+    zmax = vlsv.read_parameter('zmax')
 
     print("memory usage before reading fields:")
     process = psutil.Process()
     print(process.memory_info().rss / 1e9)  # in GB
 
     # Read face_B:
-    face_B = f.read_variable('fg_b')
+    face_B = vlsv.read_variable('fg_b')
     # Read face_E:
-    face_E = f.read_variable('fg_e')
+    face_E = vlsv.read_variable('fg_e')
 
     print("memory usage after reading fields:")
     process = psutil.Process()
@@ -117,6 +115,19 @@ def interpolators_fg(f, xrange = None, yrange = None, zrange = None):
     del face_E
     del face_B
 
+    return face_E_indexed, face_B_indexed, x, y, z, ixmin, ixmax, iymin, iymax, izmin, izmax, dcell
+
+
+def interpolators_fg(f, xrange = None, yrange = None, zrange = None):
+    '''
+    make E and B interpolators
+    works for runs with field grid (fg_) data. e.g., runs  EGI, EGL, EGP (occasional FHA snapshots?)
+    xrange, yrange, zrange: set to two-element list/array of floats [min, max] to consider only a spatial subset of the fg grid
+        e.g. xrange = [-1e8, 1e8]  # meters
+    '''
+
+    face_E_indexed, face_B_indexed, x, y, z, ixmin, ixmax, iymin, iymax, izmin, izmax, dcell = read_fg(f, xrange = xrange, yrange = yrange, zrange = zrange)
+
     print("memory usage after face_E,B deletion:")
     process = psutil.Process()
     print(process.memory_info().rss / 1e9)  # in GB
@@ -126,34 +137,28 @@ def interpolators_fg(f, xrange = None, yrange = None, zrange = None):
                                                     y[iymin:iymax]-0.5*dcell[1], 
                                                     z[izmin:izmax]-0.5*dcell[2]), 
                                                     face_E_indexed[:,:,:,0])
-                                                    #face_E[ixmin:ixmax,iymin:iymax,izmin:izmax,0])
     intp_E_y = interpolate.RegularGridInterpolator((x[ixmin:ixmax]-0.5*dcell[0], 
                                                     y[iymin:iymax], 
                                                     z[izmin:izmax]-0.5*dcell[2]), 
                                                     face_E_indexed[:,:,:,1])
-                                                    #face_E[ixmin:ixmax,iymin:iymax,izmin:izmax,1])
     intp_E_z = interpolate.RegularGridInterpolator((x[ixmin:ixmax]-0.5*dcell[0],
                                                     y[iymin:iymax]-0.5*dcell[1],
                                                     z[izmin:izmax]), 
                                                     face_E_indexed[:,:,:,2])
-                                                    #face_E[ixmin:ixmax,iymin:iymax,izmin:izmax,2])
 
     # face-centered B-field interpolation
     intp_B_x = interpolate.RegularGridInterpolator((x[ixmin:ixmax]-0.5*dcell[0],
                                                     y[iymin:iymax],
                                                     z[izmin:izmax]),
                                                     face_B_indexed[:,:,:,0])
-                                                    #face_B[ixmin:ixmax,iymin:iymax,izmin:izmax,0])
     intp_B_y = interpolate.RegularGridInterpolator((x[ixmin:ixmax],
                                                     y[iymin:iymax]-0.5*dcell[1],
                                                     z[izmin:izmax]),
                                                     face_B_indexed[:,:,:,1])
-                                                    #face_B[ixmin:ixmax,iymin:iymax,izmin:izmax,1])
     intp_B_z = interpolate.RegularGridInterpolator((x[ixmin:ixmax],
                                                     y[iymin:iymax],
                                                     z[izmin:izmax]-0.5*dcell[2]),
                                                     face_B_indexed[:,:,:,2])
-                                                    #face_B[ixmin:ixmax,iymin:iymax,izmin:izmax,2])
 
     print("memory usage after making interpolators:")
     process = psutil.Process()
@@ -194,7 +199,7 @@ def intp_tdepify(intp_list, t_list):
         intp1 = intp_list[1]
         t0 = t_list[0]
         t1 = t_list[1]
-        print('making a two-time interpolator: ', t0, ' t0 ', t1)
+        print('making a two-time interpolator: ', t0, ' to ', t1)
         if t0==t1:
             print('ERROR! inputs t0 and t1 cannot be equal')
             return None
@@ -222,24 +227,34 @@ def intp_tdepify(intp_list, t_list):
             # recursion: input lists with length 2 (see above elif case)
             intps_t.append( intp_tdepify(intp_list[i:i+2], t_list[i:i+2]) )
         t0 = t_list[0]
-        dt = t_list[1] - t_list[0]  # approximate time difference throughout t_list
+        delta_t = t_list[1] - t_list[0]  # approximate time difference throughout t_list
         print('t0 = ', t0)
         print('t_f = ', t_list[-1])
 
         # wrapper function that links together many time-interpolators
         def output_func(x, t = 0):
-            index = min( int((t - t0) // dt), n_intervals-1 )  # initial guess (should be ~1 off at worst)
+            #index = min( int( np.abs((t - t0) // delta_t) ), n_intervals-1 )  # initial guess (should be ~1 off at worst). klug?? this np.abs should not be necessary
+            index = int( np.abs((t - t0) // delta_t) ) % n_intervals  # initial guess (should be ~1 off at worst for near-uniformly spaced times). klug?? this np.abs should not be necessary
             tdiff_sign = int(np.sign(t - t_list[index]))
+            count = 0
             if tdiff_sign != 0:
                 try:
-                    while (t<t_list[index]) | (t>t_list[index+1]):
+                    while ((t<t_list[index]) | (t>t_list[index+1])) & (count < n_intervals):
                         #print('old index {}'.format(index))
                         # iterate (if necessary) until correct time range is found
-                        index += tdiff_sign
+                        #index += tdiff_sign
+                        index = (index + tdiff_sign) % n_intervals
                         #print('new index {}'.format(index))
                         #print('new times t0 = {}, t1 = {}'.format(t_list[index], t_list[index+1]))
+                        count += 1
+                    if count == n_intervals:
+                        print("output_func: count exceeded n_intervals!")
+                        print("index = {}, t = {}, tdiff_sign = {}, t0 = {}, t_f = {}, delta_t = {}, n_intervals = {}, count = {}".format(index, t, tdiff_sign, t0, t_list[-1], delta_t, n_intervals, count))
                 except IndexError:
-                    print("output_func: time t out of bounds!")
+                    #print("output_func: time t out of bounds!")
+                    print("index = {}, t = {}, tdiff_sign = {}, t0 = {}, t_f = {}, delta_t = {}, n_intervals = {}, count = {}".format(index, t, tdiff_sign, t0, t_list[-1], delta_t, n_intervals, count))
+                    import sys
+                    sys.exit()
             intp_t = intps_t[index]
             return intp_t(x, t=t)
     
@@ -406,30 +421,36 @@ def BorisC(position, u_t_minus_half, q_m, electric_field, magnetic_field, timest
         pdt[tid]=new_dt;
 '''
 
-def integrate_boris(method, X0, t, q_m, E, B, time_sign):    #args=(charge/mass,E,B,time_sign)):    # , rtol = 0.01*tol_def, atol=0.01*tol_def):
+def integrate_boris(method, X0, t, q_m, E, B, time_sign, gyro_subdivide = 50.):    #args=(charge/mass,E,B,time_sign)):    # , rtol = 0.01*tol_def, atol=0.01*tol_def):
     x = X0[0:3]
     v = X0[3:]
-
     X = np.zeros([t.size, 6])
     X[0,:] = X0
 
+    alerted = False
     for i in range(t.size-1):
-        delta_t = abs(t[i+1] - t[i])
-        gyroperiod = abs(1. / (2. * np.pi * np.linalg.norm(B(x, t=t[i])) * q_m))
-        gyro_subdivide = 50.    # Boris solver timestep divides delta_t into an integer number of smaller steps,
-                                 # ensuring time_step <= (gyroperiod / gyro_subdivide)
-        nt = int(np.ceil(gyro_subdivide * abs(delta_t) / gyroperiod))   # note: nt >= 1
-        timestep = time_sign * delta_t / nt
-        alerted = False
-        for j in range(nt):
-            try:
-                E_inpt = E(x, t=t[i] + j*timestep)
-                B_inpt = B(x, t=t[i] + j*timestep)
+        try:
+            delta_t = abs(t[i+1] - t[i])
+            # gyro_subdivide: Boris solver timestep divides delta_t into an integer number of smaller steps,
+            # ensuring time_step <= (gyroperiod / gyro_subdivide)
+            gyroperiod = abs( 2. * np.pi / (q_m * np.linalg.norm(B(x, t=t[i])) ))
+            nt = int(np.ceil(gyro_subdivide * abs(delta_t) / gyroperiod))   # note: nt >= 1
+            timestep = time_sign * delta_t / nt
+            #print('t_start = {}'.format(t[i]))
+            #print('t_out = {}'.format(t[i+1]))
+            #print('timestep = {}\n\n'.format(timestep))
+            for j in range(nt):
+                t_eval = t[i] + j*timestep
+                E_inpt = E(x, t=t_eval)
+                B_inpt = B(x, t=t_eval)
                 x, v = method(x, v, q_m, E_inpt, B_inpt, timestep)
-            except ValueError: # Stop updating particles that exit domain. see interpolate.RegularGridInterpolator(bounds_error=True) documentation
-                if not alerted:
-                    print('Particle escaped spatial domain! x = {}, v = {}'.format(x, v))
-                    alerted = True
+                #print(' t_eval = {}'.format(t_eval))
+                #print(' E_inpt = {}'.format(E_inpt))
+                #print(' B_inpt = {}'.format(B_inpt))
+        except ValueError: # Stop updating particles that exit domain. see interpolate.RegularGridInterpolator(bounds_error=True) documentation
+            if not alerted:
+                print('Particle escaped spatial domain! x = {}, v = {}'.format(x, v))
+                alerted = True
         # save particle positions at the specified times
         X[i+1,0:3] = x
         X[i+1,3:] = v
@@ -438,7 +459,7 @@ def integrate_boris(method, X0, t, q_m, E, B, time_sign):    #args=(charge/mass,
 
 
 @timer
-def trace_particle(f, x0, v0, interpolators = None, particle = 'electron', time_sign = 1, nt = None, dt = 1e-3, method = 'odeint', intp_time = False):
+def trace_particle(f, x0, v0, interpolators = None, particle = 'electron', time_sign = 1, nt = None, dt = 1e-3, method = 'odeint', intp_time = False, res = None):
     '''
     f: vlsvReader object
     x0: 3-element array, initial position [m]
@@ -449,6 +470,7 @@ def trace_particle(f, x0, v0, interpolators = None, particle = 'electron', time_
     dt: time step
     method: 'odeint', 'BorisA', 'BorisB', 'BorisC'
     intp_time: Boolean, set to interpolate wrt time
+    res: numerical value, representing gyrosubdivide if method='Boris[A-C]', and [a,r]tol if method = 'odeint'
     '''
 
     if particle == 'electron':
@@ -475,6 +497,8 @@ def trace_particle(f, x0, v0, interpolators = None, particle = 'electron', time_
     t0 = vlsvReader.read_parameter('time')
     t = np.linspace(0, nt*dt, num = nt+1)
     t_phys = t0 + t * time_sign
+    print('t_phys[0:10]', t_phys[0:10])
+    print('t_phys[-1:-10:-1]', t_phys[-1:-10:-1])
     # Do the numerical integration of the equation of motion.
     print('integrating motion...')
     print('time', t)
@@ -482,10 +506,11 @@ def trace_particle(f, x0, v0, interpolators = None, particle = 'electron', time_
 
     boris_methods = {'BorisA':BorisA, 'BorisB':BorisB, 'BorisC':BorisC}
     if method == 'odeint':
-        tol_def = 1.49012e-8 # Default tolerance. See scipy.odeint() documentation. ewt = rtol * abs(y) + atol.
-        X = odeint(lorentz, X0, t_phys, args=(charge/mass,E,B,time_sign,), rtol = 0.01*tol_def, atol=0.01*tol_def)
+        if res == None:
+            res = 1.49012e-10 # 0.01 * Default tolerance. See scipy.odeint() documentation. ewt = rtol * abs(y) + atol.
+        X = odeint(lorentz, X0, t_phys, args=(charge/mass,E,B,time_sign,), rtol = res, atol = res)
     else:
-        X = integrate_boris(boris_methods[method], X0, t_phys, charge/mass, E, B, time_sign) #  rtol = 0.01*tol_def, atol=0.01*tol_def)
+        X = integrate_boris(boris_methods[method], X0, t_phys, charge/mass, E, B, time_sign, gyro_subdivide = res)
 
     x_out = X[:, 0:3]
     v_out = X[:, 3:]
@@ -496,21 +521,23 @@ def sample_evdf(vlsvReader, x, v):
     '''
     given a vlsvReader object, find the value of the distribution function f
     at a given coordinate in position/velocity phase space: f(x,v)
-    assumes a maxwellian f, and polytropic equation of state (adiabatic index 5/3)
+    assumes a maxwellian f, and polytropic equation of state (polytropic index 5/3)
 
     Inputs:
     x: position vector [m], 3-element array
     v: velocity vector [m/s], 3-element array
     '''
     gamma = 5. / 3.
-    try:
-        # Generally, it should be possible to find parameters with vlsvReader.get_config().
-        # Tested: FHA works, but not EGL
-        n0 = float(f.get_config()['proton_Magnetosphere']['rho'][0])
-        T0 = 1.380649e-23 * float(f.get_config()['proton_Magnetosphere']['T'][0])
-    except:
-        n0 = 1e6              # EGI, EGL, FHA [m^-3]. 
-        T0 = 1.380649e-23 * 5e5         # EGI, EGL [Joules]
+    #try:
+    #    # Generally, it should be possible to find parameters with vlsvReader.get_config().
+    #    # Tested: FHA works, but not EGL
+    #    n0 = float(f.get_config()['proton_Magnetosphere']['rho'][0])
+    #    T0 = 1.380649e-23 * float(f.get_config()['proton_Magnetosphere']['T'][0])
+    #except:
+    #    n0 = 1e6              # EGI, EGL, FHA [m^-3]. 
+    #    T0 = 1.380649e-23 * 5e5         # EGI, EGL [Joules]
+    n0 = 1e6              # EGI, EGL, FHA [m^-3]. 
+    T0 = 1.380649e-23 * 5e5         # EGI, EGL [Joules]
     C = T0 * n0**(1. - gamma)
     n = vlsvReader.read_interpolated_variable('proton/vg_rho', x)
     T = C * n**(gamma - 1.)
@@ -526,8 +553,9 @@ def sample_evdf(vlsvReader, x, v):
 #@profile
 def liouville_1pt(input_tuple):
     #vlsvReader, x0, v0, interpolators, particle, time_sign, nt, dt = input_tuple
-    x0, v0, particle, time_sign, nt, dt, method, intp_time = input_tuple
-    x, v, t = trace_particle(vlsvReader, x0, v0, interpolators = interpolators, particle = particle, time_sign = time_sign, nt = nt, dt = dt, method = method, intp_time = intp_time)
+    x0, v0, particle, time_sign, nt, dt, method, intp_time, res = input_tuple
+    x, v, t = trace_particle(vlsvReader, x0, v0, interpolators = interpolators, particle = particle, time_sign = time_sign, nt = nt, dt = dt, method = method, intp_time = intp_time, res = res)
+    print('t[0:200]:', t[0:200])
     print('final x: ', x[-1])
     print('final v: ', v[-1])
     f = sample_evdf(vlsvReader, x[-1], v[-1])
@@ -536,8 +564,7 @@ def liouville_1pt(input_tuple):
     return f, x[-1], v[-1], x, v, t
 
  
-def liouville(x, run, fileIndex, save_data = False, particle = 'electron', time_sign = 1, nt = 10000, dt = 1e-3, vmin = -4e6, vmax = 4e6, nv = 2, method = 'odeint', intp_time = False):
-#def liouville(vlsvReader, x, save_data = False,  interpolators = None, particle = 'electron', time_sign = 1, nt = 10000, dt = 1e-3 ):
+def liouville(x, run, fileIndex, save_data = False, particle = 'electron', time_sign = 1, nt = 10000, dt = 1e-3, vmin = -4e6, vmax = 4e6, nv = 2, method = 'odeint', intp_time = False, res = None):
     # note: vlsvReader and interpolators are global variables to enable Pool.map
     B = vlsvReader.read_interpolated_variable('vg_b_vol', x)
     vbulk = vlsvReader.read_interpolated_variable('proton/vg_v', x)
@@ -547,12 +574,14 @@ def liouville(x, run, fileIndex, save_data = False, particle = 'electron', time_
     vperp_hat = vperp_hat / np.sqrt( vperp_hat[0]**2 + vperp_hat[1]**2 + vperp_hat[2]**2 )
     dv = (vmax - vmin) / nv
     vpar, vperp = np.meshgrid( np.arange(vmin, vmax, dv), np.arange(vmin,vmax, dv), indexing='ij')
+
+    # MULTI-THREADING:
     from multiprocessing import Pool
     pool = Pool(int(ARGS.nproc))
     xv_list = []        # initial conditions
     for i in range(nv):
         for j in range(nv):
-            xv_list.append( (x, vbulk + (vpar_hat * vpar[i, j]) + (vperp_hat * vperp[i, j]), particle, time_sign, nt, dt, method, intp_time) )
+            xv_list.append( (x, vbulk + (vpar_hat * vpar[i, j]) + (vperp_hat * vperp[i, j]), particle, time_sign, nt, dt, method, intp_time, res) )
             #xv_list.append( (x, (vpar_hat * (vbulk_mag + vpar[i, j])) + vperp_hat * vperp[i, j], particle, time_sign, nt, dt) )
             #xv_list.append( (x, (vpar_hat * (vbulk_mag + vpar[i, j])) + vperp_hat * vperp[i, j], interpolators, particle, time_sign, nt, dt) )
     with Pool(int(ARGS.nproc)) as p:
@@ -576,8 +605,15 @@ def liouville(x, run, fileIndex, save_data = False, particle = 'electron', time_
             x_trace[i].append(data[ind][3])
             v_trace[i].append(data[ind][4])
             t[i].append(data[ind][5])
+    t0 = vlsvReader.read_parameter('time')
+    t_phys = t0 + t * time_sign
+    if res is None:
+        res_string = 'dummy-res-string'
+    else:
+        res_string = '_res{:.2e}'.format(res)
+
     if save_data:
-        save('/wrk-vakka/users/horakons/carrington/data/particle_tracer/f_liouville_test_{}_{}_{}_nt_{}_x{:.1f}_y{:.1f}_z{:.1f}_intptime{}_{}.pickle'.format(run, fileIndex, particle, nt, x[0]/R_EARTH, x[1]/R_EARTH, x[2]/R_EARTH, int(intp_time), method), run = run, fileIndex = fileIndex, f = f, vpar = vpar, vperp = vperp, x_i = x_i, v_i = v_i, x_f = x_f, v_f = v_f, x = x_trace, v=v_trace, t=t, filename = filename)
+        save('/wrk-vakka/users/horakons/carrington/data/particle_tracer/f_liouville_test_{}_{}_{}_nt_{}_x{:.1f}_y{:.1f}_z{:.1f}_intptime{}_{}{}.pickle'.format(run, fileIndex, particle, nt, x[0]/R_EARTH, x[1]/R_EARTH, x[2]/R_EARTH, int(intp_time), method, res_string), run = run, fileIndex = fileIndex, f = f, vpar = vpar, vperp = vperp, x_i = x_i, v_i = v_i, x_f = x_f, v_f = v_f, x = x_trace, v=v_trace, t=t, t_phys = t_phys, time_sign = time_sign, method = method, res = res, filename = filename)
     return f, vpar, vperp, x_i, v_i, x_f, v_f, x_trace, v_trace, t
 
 
@@ -608,12 +644,12 @@ if __name__ == '__main__':
 
     vlsvReader = ft.f(filename)
     # "initial" conditions for (back-)tracing
-    x0 = R_EARTH * np.array([13.,0,0])          # [11.5, 0, 0]. Note to compare with Lorentziator, must be within box |x|,|y|,|z|< 20 RE
+    x0 = R_EARTH * np.array([12.8,0,0])          # [11.5, 0, 0]. Note to compare with Lorentziator, must be within box |x|,|y|,|z|< 20 RE
     xrange = [-30.*R_EARTH, 30.*R_EARTH]   # if None, interpolate across whole grid
     yrange = [-30.*R_EARTH, 30.*R_EARTH]
     zrange = [-30.*R_EARTH, 30.*R_EARTH]
     particle = 'electron'
-    nt = 3000   #200000
+    nt = 160000
     #nt = 600
     dt = 5e-4             # 0.1?,   estimate: omega_p ~ 1 Hz, omega_e ~ 1 kHz in solar wind
     time_sign = -1
@@ -627,27 +663,27 @@ if __name__ == '__main__':
         vmin = -1e5
         vmax = 1e5
     nv = 8
-    method = 'BorisB'  #  'odeint', 'Boris[A-C]'
-    intp_time = True
 
-    print('method: ', method)
+    intp_time = True
     #interpolators = interpolators_fg(vlsvReader)
     if intp_time:
         n_sec = int(nt * dt) + 1
-        vlsvReader_list = [ ft.f(get_vlsvfile_fullpath(run, fileIndex + time_sign * i)) for i in range(-1, n_sec+1) ]
-        #vlsvReader0 = ft.f(get_vlsvfile_fullpath(run, fileIndex - time_sign))
-        #vlsvReader1 = ft.f(get_vlsvfile_fullpath(run, fileIndex))
-        #vlsvReader2 = ft.f(get_vlsvfile_fullpath(run, fileIndex + time_sign))
-        #vlsvReader3 = ft.f(get_vlsvfile_fullpath(run, fileIndex + time_sign * 2))
-        #interpolators = interpolators_fg_tdep([vlsvReader0, vlsvReader1, vlsvReader2, vlsvReader3],
-        #                                       xrange = xrange, yrange =yrange, zrange = zrange )
+        vlsvReader_list = [ ft.f(get_vlsvfile_fullpath(run, fileIndex + time_sign * i)) for i in range(-1, n_sec+2) ]     # input the vlsv file
         interpolators = interpolators_fg_tdep(vlsvReader_list, xrange = xrange, yrange =yrange, zrange = zrange )
         print('(time-dependent) Interpolators constructed!')
     else:
         interpolators = interpolators_fg(vlsvReader)
-        interpolators = (intp_tdepify([interpolators[0]]), intp_tdepify([interpolators[1]]))
-    f, vpar, vperp, x_i, v_i, x_f, v_f, x, v, t = liouville(x0, run, fileIndex, save_data = True, particle = particle, time_sign = time_sign,
-                                                            nt = nt, dt = dt, vmin = vmin, vmax = vmax, nv = nv, method = method, intp_time = intp_time)
+        interpolators = (intp_tdepify([interpolators[0]], [fileIndex]), intp_tdepify([interpolators[1]], [fileIndex]))
+
+    method = 'BorisA'  #  'odeint', 'BorisA', 'BorisB', 'BorisC'
+    print('method: ', method)
+    #res = 16    # numerical value, representing gyrosubdivide in integrate_boris() or [a-r]tol in odeint()
+    for i in range(9, 10):
+        res = 2**(i+1)         # res = gyro_subdivide
+        if method == 'odeint':
+            res = res * 1e-10  # res = tol
+        f, vpar, vperp, x_i, v_i, x_f, v_f, x, v, t = liouville(x0, run, fileIndex, save_data = True, particle = particle, time_sign = time_sign,
+                                                            nt = nt, dt = dt, vmin = vmin, vmax = vmax, nv = nv, method = method, intp_time = intp_time, res = res)
     print(vpar)
     print(vperp)
     print(f)

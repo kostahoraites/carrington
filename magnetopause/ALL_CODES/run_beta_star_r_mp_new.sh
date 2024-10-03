@@ -2,7 +2,7 @@
 ###carrington:
 
 #SBATCH -J beta_star_r_mp_new
-#SBATCH -t 06:00:00
+#SBATCH -t 12:00:00
 #SBATCH -M carrington
 #SBATCH --partition=short
 #SBATCH --ntasks=1
