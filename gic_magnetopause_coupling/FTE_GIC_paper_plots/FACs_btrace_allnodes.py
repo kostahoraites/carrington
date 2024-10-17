@@ -11,6 +11,7 @@ import scipy
 import statsmodels.api as sm
 from fieldtracer import static_field_tracer_3d
 import argparse
+from matplotlib import ticker
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-nproc', default=1, help="number of processors to use " )
@@ -22,7 +23,7 @@ global R_E
 R_E = 6371000.
 #run = "FHAFGB"   # FHA files that contain full resolution 'fg_b' magnetic field variable
 run = "FHA"   # FHA files that contain full resolution 'fg_b' magnetic field variable
-fileIndex = 1165 # 1165  # 110  # time = fileIndex*10 for FHAFGB run (larger files saved more sparsely).
+fileIndex = 1100 # 900, 1000, 1100, 1165  # 110  # time = fileIndex*10 for FHAFGB run (larger files saved more sparsely).
 f0 = pt.vlsvfile.VlsvReader(get_vlsvfile_fullpath(run, fileIndex))   # time in Fig. 1: t = 1165 s
 #pos = f0.get_ionosphere_node_coords()  # shape (21568, 3)
 
@@ -62,7 +63,7 @@ def trace_it(i):
     ig_upmappednodecoords = f0.read_variable('ig_upmappednodecoords')
     vg_coordinates_0 = ig_upmappednodecoords[i, :]
 
-    filename = '/wrk-vakka/users/horakons/carrington/gic_magnetopause_coupling/txt_files/btraces/fg_innerboundary_btrace_C2_{}_phi{:.2f}_theta{:.2f}.txt'.format(run, ig_phi_deg[i], ig_theta_deg[i])
+    filename = '/wrk-vakka/users/horakons/carrington/gic_magnetopause_coupling/txt_files/btraces/fg_innerboundary_btrace_C2_{}_t{}_phi{:.2f}_theta{:.2f}.txt'.format(run, int(fileIndex), ig_phi_deg[i], ig_theta_deg[i])
     if save:
         dx = 1e4
         # Trace the B-field line
@@ -76,7 +77,8 @@ def trace_it(i):
         #dstep_write = int(max_iterations / ncoordsave)   # number of iterations between writes  (*2 if keyword direction = '+-')
         x_b = static_field_tracer_3d( f0, np.array([vg_coordinates_0]), max_iterations, dx, direction=direction, grid_var='vg_b_vol' )   # numpy array
         # Save to a text file
-        np.savetxt(filename, x_b[0, :,:])
+        x = x_b[0, :,:]
+        np.savetxt(filename, x)
     else:
         # now load the data and save a variable for plotting:
         x=np.loadtxt(filename)
@@ -96,7 +98,7 @@ def trace_it(i):
 
     #LOAD DATA
 
-    x_0_str = 'ig_{}_x{:.2f}_y{:.2f}_z{:.2f}_RE'.format(i, x[0,0]/R_E, x[0, 1]/R_E, x[0, 2]/R_E)
+    x_0_str = 't_{}_ig_{}_x{:.2f}_y{:.2f}_z{:.2f}_RE'.format(int(fileIndex), i, x[0,0]/R_E, x[0, 1]/R_E, x[0, 2]/R_E)
     #x_0_str = 'ig_{}_t{}_x{:.2f}_y{:.2f}_z{:.2f}_RE'.format(i, int(fileIndex), x[0,0]/R_E, x[0, 1]/R_E, x[0, 2]/R_E)
     datafile = 'txtfiles/J_par_B'+ x_0_str +'.txt'
     datafile_xo = 'txtfiles/XO'+ x_0_str +'.txt'
@@ -130,7 +132,13 @@ def trace_it(i):
     i_tf = tf - tmin
     i_x0 = 0 # starting plot position index
     i_xf = 5000 + 1
-    npts_plot = i_xf - i_x0
+    npts_raw_data = i_xf - i_x0
+    # Alfven wave x(t) propagation
+    va_1d = f0.read_interpolated_variable('vg_va', x)
+    x_1d = np.arange(npts_raw_data) * dx
+    t_1d = np.cumsum(dx / va_1d)
+    t_1d_reverse = np.cumsum(dx / np.flip(va_1d))
+
     dx_cell = 1e6
     di_cell = int(dx_cell/dx)
     print('di_cell', di_cell)
@@ -139,12 +147,11 @@ def trace_it(i):
     tvar = tvar[i_x0:i_xf:di_cell, i_t0:i_tf]
     zvar = zvar[i_x0:i_xf:di_cell, i_t0:i_tf]
     xo_var = xo_var[i_x0:i_xf:di_cell, i_t0:i_tf]
+    x_1d = x_1d[i_x0:i_xf:di_cell]
+    t_1d = t_1d[i_x0:i_xf:di_cell]
+    t_1d_reverse = t_1d_reverse[i_x0:i_xf:di_cell]
+    npts_plot = x.shape[0]
 
-    # Alfven wave x(t) propagation
-    va_1d = f0.read_interpolated_variable('vg_va', x)
-    x_1d = np.arange(npts_plot) * dx
-    t_1d = np.cumsum(dx / va_1d)
-    t_1d_reverse = np.cumsum(dx / np.flip(va_1d))
 
     # O-line occurrences
     i_Os, j_Os = np.where(xo_var == -1)
@@ -172,7 +179,7 @@ def trace_it(i):
     ax.set_xlabel(r'dist. along curve [$R_E$]')
     ax.set_ylabel('time [s]')
     ax.set_title('FACs on cusp field lines')
-    #ax.set_xlim([0, npts_plot*dx])
+    #ax.set_xlim([0, npts_raw_data*dx])
 
     # set new axes and colorbar limits
     ax.set_ylim([t0, tf])
@@ -185,10 +192,10 @@ def trace_it(i):
     #            xy=(0,t0-(tf-t0)/2.), xytext=(0,t0-(tf-t0)/2.),
     #            annotation_clip=False, rotation = -30., color = 'orange')
     ax.annotate(r'$x_4$',
-                xy=(npts_plot*dx/R_E,t0-(tf-t0)/12.), xytext=(npts_plot*dx/R_E,t0-(tf-t0)/12.),
+                xy=(npts_raw_data*dx/R_E,t0-(tf-t0)/12.), xytext=(npts_raw_data*dx/R_E,t0-(tf-t0)/12.),
                 annotation_clip=False, rotation = 0, color = 'orange', fontsize = 26)
     #ax.annotate('[{:.2f},{:.2f},{:.2f}]'.format(x[-1, 0]/R_E, x[-1, 1]/R_E, x[-1, 2]/R_E) + r' $R_E$', 
-    #            xy=(npts_plot*dx/R_E,t0-(tf-t0)/2.), xytext=(npts_plot*dx/R_E,t0-(tf-t0)/2.),
+    #            xy=(npts_raw_data*dx/R_E,t0-(tf-t0)/2.), xytext=(npts_raw_data*dx/R_E,t0-(tf-t0)/2.),
     #            annotation_clip=False, rotation = -30., color = 'orange')
     #annotate O-lines
     for i_O, j_O in zip(i_Os, j_Os):
@@ -202,19 +209,36 @@ def trace_it(i):
 
     # tick marks
 
-    maxlog=int(np.ceil(np.log10(bound)))
-    minlog=int(np.ceil(np.log10(bound)))
+    maxlog=int(np.floor(np.log10(bound)))
+    minlog = maxlog
     logthresh=int(np.floor(np.log10(linthresh)))
     logstep=1
+    def signstr(number):
+        if number > 0:
+            return '^+'
+        else:
+            return '^-'
     ticks=([-(10**xx) for xx in range(logthresh, minlog+1, logstep)][::-1]
             +[0.0]
             +[(10**xx) for xx in range(logthresh, maxlog+1, logstep)] )
+    ticklabels=([r'$-10^{}$'.format('{' + str(xx) + '}') for xx in range(logthresh, minlog+1, logstep)][::-1]
+            +['0']
+            +[r'$10^{}$'.format('{' + str(xx) + '}') for xx in range(logthresh, maxlog+1, logstep)])
+    allticks=([-(10**(xx/2.)) for xx in range(logthresh-1, 2*minlog+1, logstep)][::-1]
+            +[0.0]
+            +[(10**(xx/2.)) for xx in range(logthresh-1, 2*maxlog+1, logstep)] )
+    allticks_ind = np.where(np.abs(np.array(allticks)) < bound)[0]
+    allticks = np.array(allticks)[allticks_ind]
     print('ticks: ', ticks)
-    mycbar = fig.colorbar(im, cax=cax, orientation='vertical', ticks = ticks)
+    #cbformat = ticker.ScalarFormatter()
+    #cbformat.set_scientific('%.2e')
+    #cbformat.set_powerlimits((-10,10))
+    #cbformat.set_useMathText(True)
+    mycbar = fig.colorbar(im, cax=cax, orientation='vertical') #, ticks = ticks) #, format = cbformat)
     mycbar.set_label(r'$J_\parallel/B$ $[H^{-1}]$')
+    #mycbar.set_ticklabels(ticklabels)
     mycbar.ax.minorticks_on()
-    #minorticks = p.norm(np.arange(1, 10, 2))
-    #cb.ax.xaxis.set_ticks(minorticks, minor=True)
+    mycbar.ax.yaxis.set_ticks(allticks, minor=True)
     #plt.tight_layout()
 
     # Second plot: magnetosphere cut
@@ -241,7 +265,7 @@ def trace_it(i):
     ax2.plot(r_C * np.cos(theta), r_C * np.sin(theta), linestyle = '--', color = 'grey', zorder = 2, linewidth=3)
 
     # save figure
-    filename = '/wrk-vakka/users/horakons/carrington/gic_magnetopause_coupling/FTE_GIC_paper_plots/keograms/FACs_Jpar_keogram'+'_ig_{}_'.format(i)+x_0_str+'.png'
+    filename = '/wrk-vakka/users/horakons/carrington/gic_magnetopause_coupling/FTE_GIC_paper_plots/keograms/{}/FACs_Jpar_keogram'.format(int(fileIndex))+'_ig_{}_'.format(i)+x_0_str+'.png'
     mkdir_path(filename)
     plt.tight_layout()
     plt.savefig(filename, bbox_inches="tight")
