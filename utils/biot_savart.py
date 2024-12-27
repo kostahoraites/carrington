@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from numba import jit
 # import numba
 from memory_profiler import profile      # @profile decorator
-import ig_tools
 
 global R_EARTH
 R_EARTH = 6.371e6            #check what value is used in simulations
@@ -440,7 +439,6 @@ def B_ionosphere(f, coord_list = None, ig_r = None, method = 'integrate'):
         coord_list = list(ig_r * R_EARTH / R_IONO)  # Rescale ionospheric mesh (radius ~R_IONO) to a smaller grid at radius R_EARTH
     dummy = np.array(coord_list)*0. 
     try:
-        #ig_inplanecurrent = ig_tools.ig_inplanecurrent(f)  # commented 27.9.2024
         ig_inplanecurrent = f.read_variable('ig_inplanecurrent')  # height-integrated, element centered. Units [A/m]. If no data in file, use data reducer 'ig_inplanecurrent' instead
         if method == "local":
             ig_r_hat = vec_unit(ig_r)   # approximate (technically |ig_r| not exactly R_IONO)
