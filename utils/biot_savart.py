@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from numba import jit
 # import numba
 from memory_profiler import profile      # @profile decorator
-import ig_tools
 
 global R_EARTH
 R_EARTH = 6.371e6            #check what value is used in simulations
@@ -123,7 +122,8 @@ def fac_map(f, vg_x, vg_y, vg_z, dx, f_J_sidecar = None, r_IB = 5 * 6.371e6, mag
     vg_b_vol = b_dip(vg_x, vg_y, vg_z, mag_mom_vector = mag_mom_vector)
 
     vg_r, vg_theta, vg_phi = cartesian_to_spherical(vg_x, vg_y, vg_z)
-    inner, = np.where((vg_r < r_IB) & (vg_r > (R_EARTH + dx/2)))  # only integrate over cells whose centers are at least 1/2 a cell length beyond radius of 1 R_E
+    #inner, = np.where((vg_r < r_IB) & (vg_r > (R_EARTH + dx/2)))  # only integrate over cells whose centers are at least 1/2 a cell length beyond radius of 1 R_E
+    inner, = np.where((vg_r < r_IB) & (vg_r > (R_IONO + dx/2)))  # only integrate over cells whose centers are at least 1/2 a cell length beyond radius of 1 R_E
 
     vg_J_eval = np.zeros([vg_x.size, 3])
 
@@ -212,24 +212,24 @@ def biot_savart(coord_list, f, f_J_sidecar = None, r_IB = 5 * 6.371e6, mesh = 'g
 
     # load or calculate currents
 
-    if f_J_sidecar is None:
-        # calculate directly from B-field Jacobian (ionospheric runs, e.g. FHA)
-        '''
+    if ARGS.run == 'FID':      # klug--- run FID had an additional 'vg_derivatives/' in the variable name
         vg_J = np.zeros([ncells,3])
-        vg_dperbxvoldy = f.read_variable('vg_dperbxvoldy')
-        vg_dperbyvoldx = f.read_variable('vg_dperbyvoldx')
-        vg_dperbxvoldz = f.read_variable('vg_dperbxvoldz')
-        vg_dperbzvoldx = f.read_variable('vg_dperbzvoldx')
-        vg_dperbyvoldz = f.read_variable('vg_dperbyvoldz')
-        vg_dperbzvoldy = f.read_variable('vg_dperbzvoldy')
+        vg_dperbxvoldy = f.read_variable('vg_derivatives/vg_dperbxvoldy')
+        vg_dperbyvoldx = f.read_variable('vg_derivatives/vg_dperbyvoldx')
+        vg_dperbxvoldz = f.read_variable('vg_derivatives/vg_dperbxvoldz')
+        vg_dperbzvoldx = f.read_variable('vg_derivatives/vg_dperbzvoldx')
+        vg_dperbyvoldz = f.read_variable('vg_derivatives/vg_dperbyvoldz')
+        vg_dperbzvoldy = f.read_variable('vg_derivatives/vg_dperbzvoldy')
         vg_J[:,0] = (1 / mu_0) * (vg_dperbzvoldy - vg_dperbyvoldz)
         vg_J[:,1] = (1 / mu_0) * (vg_dperbxvoldz - vg_dperbzvoldx)
         vg_J[:,2] = (1 / mu_0) * (vg_dperbyvoldx - vg_dperbxvoldy)
-        '''
-        vg_J = f.read_variable('vg_J')
-        # FILL IN: if above doesn't work, calculate J from fg_b and resample to vg grid
     else:
-        vg_J = f_J_sidecar.read_variable('vg_J')
+        if f_J_sidecar is None:
+            # calculate directly from B-field Jacobian (ionospheric runs, e.g. FHA)
+            vg_J = f.read_variable('vg_J')
+            # FILL IN: if above doesn't work, calculate J from fg_b and resample to vg grid
+        else:
+            vg_J = f_J_sidecar.read_variable('vg_J')
 
     # compute B at 'coord_list' points according to Biot-Savart law (accelerate with numba?)
 
@@ -439,8 +439,7 @@ def B_ionosphere(f, coord_list = None, ig_r = None, method = 'integrate'):
         coord_list = list(ig_r * R_EARTH / R_IONO)  # Rescale ionospheric mesh (radius ~R_IONO) to a smaller grid at radius R_EARTH
     dummy = np.array(coord_list)*0. 
     try:
-        ig_inplanecurrent = ig_tools.ig_inplanecurrent(f)
-        #ig_inplanecurrent = f.read_variable('ig_inplanecurrent')  # height-integrated, element centered. Units [A/m]
+        ig_inplanecurrent = f.read_variable('ig_inplanecurrent')  # height-integrated, element centered. Units [A/m]. If no data in file, use data reducer 'ig_inplanecurrent' instead
         if method == "local":
             ig_r_hat = vec_unit(ig_r)   # approximate (technically |ig_r| not exactly R_IONO)
             if coord_list is not None:
@@ -483,8 +482,7 @@ def B_magnetosphere(f, f_J_sidecar = None, r_IB = 5 * 6.371e6, ig_r = None):
     return B_inner, B_outer
 
 
-
-#@profile
+@profile
 def save_B_vlsv(input_tuple):
     '''
     input_tuple[0]: run (string)  # 'EGL' or 'FHA'
@@ -507,6 +505,10 @@ def save_B_vlsv(input_tuple):
         f_J_sidecar = None
         f_iono = f
         save_dir = '/wrk-vakka/group/spacephysics/vlasiator/3D/FIA/bulk_sidecars/ig_B/'
+    elif run == 'FID':
+        f_J_sidecar = None
+        f_iono = f
+        save_dir = '/wrk-vakka/group/spacephysics/vlasiator/3D/FID/bulk1_sidecars/ig_B/'
     # calculate magnetic fields
     ig_r = get_ig_r(f_iono)                     # f_iono contains the ionospheric mesh (the locations where B is evaluated)
     B_iono = B_ionosphere(f, ig_r = ig_r, method = "integrate")
@@ -516,7 +518,7 @@ def save_B_vlsv(input_tuple):
         r_IB = 5 * 6.371e6
     B_inner, B_outer = B_magnetosphere(f, f_J_sidecar = f_J_sidecar, r_IB = r_IB, ig_r = ig_r)
     # write to file
-    filename_vlsv = save_dir + 'ionosphere_B_sidecar_{}.{}_v2.vlsv'.format(run, str(fileIndex).zfill(7))
+    filename_vlsv = save_dir + 'ionosphere_B_sidecar_{}.{}TEST.vlsv'.format(run, str(fileIndex).zfill(7))
     mkdir_path(filename_vlsv)
     writer = pt.vlsvfile.VlsvWriter(f_iono, filename_vlsv, copy_meshes=("ionosphere"))
     writer.write(ig_r,'ig_r','VARIABLE','ionosphere')
@@ -589,6 +591,9 @@ if __name__ == '__main__':
     elif run == 'FIA':
         first = 1
         last = 865
+    elif run == 'FID':
+        first = 501
+        last = 1066   # maybe we go another 50s or so before we run out of resources?
 
     '''      
     # 0. Single file: integrate Biot-Savart and save output into a .vlsv sidecar file

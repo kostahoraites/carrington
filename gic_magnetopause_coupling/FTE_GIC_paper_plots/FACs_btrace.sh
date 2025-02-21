@@ -10,6 +10,6 @@
 #export PATH=/proj/jesuni/projappl/tex-basic/texlive/2020/bin/x86_64-linux:$PATH
 #module load Python/3.7.2-GCCcore-8.2.0
 
-python fg_innerboundary_btrace.py
+python FACs_btrace.py
 
 echo Job complete.
